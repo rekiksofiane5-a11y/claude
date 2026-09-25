@@ -1,0 +1,26 @@
+{
+  "name": "ad-ops-suivi",
+  "version": "1.0.0",
+  "description": "Suivi opérationnel ad ops — application de bureau autonome",
+  "main": "main.js",
+  "author": "Sofiane Rekik",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable --x64",
+    "build:win-setup": "electron-builder --win nsis --x64",
+    "build:mac": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "fr.adops.suivi",
+    "productName": "Suivi ad ops",
+    "files": ["main.js", "preload.js", "renderer/**"],
+    "win": { "target": ["portable"] },
+    "portable": { "artifactName": "Suivi-ad-ops.exe" },
+    "directories": { "output": "dist" }
+  }
+}

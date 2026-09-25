@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ad ops — suivi opérationnel</title>
+<style>
+:root{--ink:#141A2B;--ink2:#525C73;--ink3:#8C95A8;--page:#F0F1F5;--surf:#fff;--soft:#F7F8FB;--line:#DEE1E9;--bar:#151B2E;--blue:#2743F0;--red:#C33A2E;--amber:#B26A00;--green:#1B7A5A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 "Inter Tight",Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:var(--surf);border:1px solid var(--line);color:var(--ink2);border-radius:7px;padding:7px 13px;transition:.12s}
+button:hover:not(:disabled){border-color:#C3C9D6;color:var(--ink)}
+button:disabled{opacity:.42;cursor:default}
+button.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:500}
+button.prim{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500;padding:8px 15px}
+button.prim:hover{filter:brightness(1.07);color:#fff}
+button.del{margin-left:auto;color:var(--red)}
+input,select,textarea{background:var(--surf);border:1px solid var(--line);border-radius:7px;padding:7px 10px;width:100%}
+textarea{resize:vertical}
+:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#C7CCD8;border-radius:9px;border:3px solid transparent;background-clip:content-box}
+
+#top{background:var(--bar);color:#fff}
+#top .in{max-width:1240px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center;gap:22px}
+#brand{font-weight:700;letter-spacing:-.02em;font-size:15px}
+#nav{display:flex;gap:4px;height:100%}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;color:#9BA3B6;font-size:13.5px;padding:0 12px;height:100%}
+.tab:hover{color:#fff;border-color:transparent}
+.tab.on{color:#fff;font-weight:600;border-bottom-color:var(--ac)}
+#tools-right{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:#7E879C}
+#tools-right button{background:transparent;border-color:#333C54;color:#B9C0CE;padding:5px 10px;font-size:12px}
+#tools-right button:hover{color:#fff;border-color:#4B5570}
+
+#wrap{max-width:1240px;margin:0 auto;padding:26px 20px 64px}
+#head h1{font-size:26px;font-weight:700;letter-spacing:-.03em;margin:0}
+.rule{height:3px;width:38px;border-radius:2px;margin:7px 0 20px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(20,26,43,.04);overflow:hidden}
+.card.pad{padding:12px 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.num{font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.sub{font-size:12px;color:var(--ink3)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.tools select,.tools input{width:auto;min-width:130px}
+.tools input[data-set=q]{flex:1 1 160px;max-width:250px}
+.seg{margin-left:auto;display:flex;gap:4px;background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:3px}
+.seg button{border:none;padding:6px 12px;border-radius:6px;background:transparent}
+.note{font-size:12.5px;color:var(--ink2);margin-bottom:12px}
+.note i{font-style:italic}
+
+.scroll{overflow:auto;max-height:640px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{position:sticky;top:0;background:var(--soft);border-bottom:1px solid var(--line);text-align:left;font-weight:500;font-size:12px;color:var(--ink2);padding:9px 12px;white-space:nowrap;z-index:1}
+td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.b{font-weight:500;max-width:420px;overflow:hidden;text-overflow:ellipsis}
+td.m{color:var(--ink2)}td.n{font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--soft)}
+.dash{color:var(--ink3)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}
+.pill.ok{color:var(--green);background:#1B7A5A16;border:1px solid #1B7A5A28}
+.pill.no{color:var(--red);background:#C33A2E16;border:1px solid #C33A2E28}
+.pill.na{color:var(--ink3);background:#8C95A816;border:1px solid #8C95A828}
+.pager{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:12px;color:var(--ink2);background:var(--soft);font-variant-numeric:tabular-nums}
+.pager button{padding:4px 10px}
+.grow{flex:1}
+
+.row{display:flex;gap:14px;padding:14px 16px;border-top:1px solid var(--line);border-left:3px solid var(--line);cursor:pointer}
+.card > .row:first-child{border-top:none}
+.row:hover{background:var(--soft)}
+.row .ttl{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .al{font-size:13px;color:var(--ink2);margin-top:3px}
+.rt{text-align:right;font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rt b{color:var(--ink)}
+.prog{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:5px;color:var(--ink3)}
+.bar{height:4px;width:64px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ch b.s,b.s{font-size:13.5px}
+.mini{padding:9px 10px;border:1px solid var(--line);border-left:3px solid var(--line);border-radius:7px;margin-bottom:7px;cursor:pointer}
+.mini:hover{background:var(--soft)}
+.mini .ttl{font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini .sub{margin:2px 0 5px}
+.empty{padding:48px 24px;text-align:center;color:var(--ink2)}
+.empty .big{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.empty p{max-width:460px;margin:0 auto 18px}
+.foot{color:var(--ink3);font-size:12px;margin-top:14px}
+
+.ov{position:fixed;inset:0;background:rgba(20,26,43,.4);display:flex;justify-content:flex-end;z-index:30}
+.ov.mid{align-items:center;justify-content:center;padding:20px}
+.ov aside{background:var(--surf);width:min(540px,100%);height:100%;overflow-y:auto;padding:24px}
+.ov aside.sm{width:min(440px,100%)}
+.ov section{background:var(--surf);border-radius:10px;width:min(720px,100%);max-height:90%;overflow-y:auto;padding:22px}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ov h2{font-size:18px;font-weight:600;letter-spacing:-.02em;line-height:1.3;margin:8px 0 4px;word-break:break-word}
+.sep{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px}
+dl{display:grid;grid-template-columns:116px 1fr;row-gap:9px;column-gap:12px;font-size:13px;margin:0}
+dt{color:var(--ink3);padding-top:7px}dd{margin:0}
+.mt{margin-top:14px}
+.box{border:1px solid var(--line);border-radius:8px;padding:13px 15px;margin-top:18px}
+.box.soft{background:var(--soft);margin:14px 0}
+.step{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.chk{display:flex;gap:9px;align-items:center;cursor:pointer}
+.chk input{width:15px;height:15px;accent-color:var(--blue);flex:0 0 auto}
+.ind{padding-left:24px;margin-top:6px}
+.lp{margin-bottom:8px}
+.fx{display:flex;gap:6px}
+.fx button{padding:6px 10px}
+.prev{margin-top:5px;font-size:11.5px;color:var(--ink2);background:var(--soft)}
+.alert{border-left:3px solid;padding:7px 11px;margin-bottom:8px;background:var(--soft);border-radius:0 6px 6px 0}
+.gate{border-left:3px solid var(--line);padding:9px 0 9px 11px;margin-bottom:6px;border-radius:0 6px 6px 0}
+.gate.next{border-left-color:var(--blue);background:var(--soft)}
+.gate.done{border-left-color:var(--green)}
+.gate.done .gl{color:var(--ink3);text-decoration:line-through}
+.gate.next .gl{font-weight:600}
+.gate .chk .sub{margin-left:auto;padding-right:4px;white-space:nowrap}
+.gate textarea{margin-top:6px;font-size:12.5px;background:#FBFCFD}
+.n{font-variant-numeric:tabular-nums}
+.acts{display:flex;gap:8px;align-items:center;margin-top:20px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surf);padding-top:12px;border-top:1px solid var(--line)}
+.ov section .acts{position:static;border:none}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+@media(max-width:640px){#wrap{padding:18px 12px 48px}dl{grid-template-columns:1fr}dt{padding-top:2px}}
+
+/* sécurité */
+.lock{min-height:80vh;display:flex;align-items:center;justify-content:center}
+.lockbox{padding:32px;width:min(360px,100%);text-align:center}
+.lockbox .lk{font-size:26px}
+.lockbox h2{margin:8px 0 4px;font-size:19px;letter-spacing:-.02em}
+.lockbox input{margin:16px 0 10px;text-align:center;letter-spacing:.15em}
+.lockbox button{width:100%}
+.err{color:var(--red);font-size:12.5px;margin-bottom:10px}
+.secrow{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line)}
+.secrow.col{display:block}
+.secrow b{font-size:13.5px}
+.secrow .sub{margin-top:3px;max-width:430px}
+.secrow > div:first-child{flex:1}
+.fx.sb{justify-content:space-between;align-items:center}
+.snaps{max-height:190px;overflow:auto;margin-top:8px;border:1px solid var(--line);border-radius:7px}
+.snap{display:flex;gap:10px;align-items:center;padding:7px 10px;font-size:12.5px;border-bottom:1px solid var(--line)}
+.snap:last-child{border-bottom:none}
+.snap .sub{margin-left:auto}
+.snap button{padding:3px 9px;font-size:12px}
+
+</style>
+</head>
+<body>
+<div id="top"><div class="in">
+  <span id="brand">Ad ops</span>
+  <nav id="nav"></nav>
+  <div id="tools-right">
+    <span id="status"></span>
+    <button data-act="secpanel" title="Sécurité et sauvegarde">Sécurité · <span id="secState"></span></button>
+    <input type="file" id="restoreFile" accept="application/json" hidden>
+  </div>
+</div></div>
+<div id="wrap"><div id="head"></div><div id="main"></div></div>
+<div id="drawer"></div>
+<script>
+const SEED_ADSERVER = [
+    ["Adot","Adot","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adot","Adot","CM","GRANDANGLE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Adot","Adot","Adform","MEGABANNIERE","Multidevice","","","","","",""],
+    ["Adot","Adot","CM","BANNIERE","Multidevice","","","","","",""],
+    ["Adot","Adot","CM","NATIVEAD","Multidevice","","","","","",""],
+    ["Adot","Adot","CM","MEGABANNIERE","Multidevice","","","","","",""],
+    ["Adot","Adot","CM","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adot","Adot","Adform","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adot","Adot","Adform","BANNIERE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adot","Adot","Adform","BANNIERE","Multidevice","","","","","",""],
+    ["Adot","Adot","CM","HABILLAGE","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adot","Adot","CM","SKYSCRAPER","Multidevice","","","","","",""],
+    ["Adot","Adot","Adform","SKYSCRAPER","Multidevice","","","","","",""],
+    ["Adot","Adot","Adform","GRANDANGLE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Adot","Adot","Adform","NATIVEAD","Multidevice","","","","","",""],
+    ["Adot","Adot","CM","HABILLAGE","Multidevice","","","","","",""],
+    ["Adot","Adot","Adform","PAVE","Multidevice","","","","","",""],
+    ["Adot","Adot","Adform","HABILLAGE","Multidevice","","","","","",""],
+    ["Adot","Adot","Adform","HABILLAGE","Multidevice","N/A","N/A","N/A","N/A","N/A","2025-08-20"],
+    ["Adot","Adot","CM","PAVE","Multidevice","","","","","",""],
+    ["Adyoulike","","CM","POSTSPONSO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Adyoulike","","Adform","LEADAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Adyoulike","","CM","LEADAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Adyoulike","","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Adyoulike","","Adform","CONVERSATIONALAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","CM","CONVERSATIONALAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","CM","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","CM","BANNIERE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","Adform","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","Adform","STORYAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","Adform","POSTSPONSO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Adyoulike","","Adform","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Adyoulike","","CM","STORYAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","Adform","BANNIERE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Adyoulike","","CM","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Amazon Prime","DV360","Adform","PREROLL","Multidevice","Partenaire","Non","Non","Non","Non","2025-05-12"],
+    ["Amazon Prime","DV360","CM","PREROLL","Multidevice","Partenaire","Non","Non","Non","Non","2025-05-12"],
+    ["Amnet","Amnet","CM","SOCIALADSEXTENSION","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","INREAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","INSTREAMIPTV","Multidevice","Partenaire","Non","Oui","Non","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","INSTREAMIPTV","Multidevice","Partenaire","Non","Oui","Non","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","AUDIO","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","IAB","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","SOCIALADSEXTENSION","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","INSTREAMTVPROG","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","INTERSTITIEL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","INREAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","AUDIO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","IAB","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","HABILLAGE","Desktop","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","INSTREAMTVPROG","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","CM","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Amnet","Amnet","Adform","INTERSTITIEL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Azerion","","CM","SPOTAUDIO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","MASTHEAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","INGAME","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Azerion","","Adform","VIDEOAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","MEGABANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","PROFILSPONSORISE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Azerion","","CM","INSTREAM","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","VIDEOAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","INTERSTITIEL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","INGAME","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Azerion","","CM","MEGASKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","BANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","MASTHEAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","PROFILSPONSORISE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Azerion","","Adform","SPOTAUDIO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","MEGABANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","INSTREAM","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","AUDIO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","BANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","MEGASKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","CM","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","AUDIO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","INTERSTITIEL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Azerion","","Adform","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["BeReal","","Adform","IMAGEAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["BeReal","","Adform","VIDEOAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["BeReal","","CM","IMAGEAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["BeReal","","CM","VIDEOAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Criteo","Criteo","CM","IAB","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","Adform","IAB","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","CM","INTERSTITIEL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","CM","INSTREAM","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","CM","IMAGEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","Adform","INTERSTITIEL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","Adform","IMAGEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Criteo","Criteo","Adform","INSTREAM","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-10"],
+    ["Dailymotion","AmplifiProg All DSP","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Dailymotion","AmplifiProg All DSP","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["DisneyPlus","DisneyPlus","Adform","PREROLL","Multidevice","","","","","",""],
+    ["FranceTV","AmplifiProg Amazon DSP","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["FranceTV","AmplifiProg All DSP","CM","INSTREAMIPTV","TV","Adserver","Non","Oui","Non","Oui","2025-08-25"],
+    ["FranceTV","FranceTV","CM","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["FranceTV","AmplifiProg Amazon DSP","Adform","PREROLL","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["FranceTV","AmplifiProg Amazon DSP","Adform","PREROLL","Desktop","Partenaire","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["FranceTV","FranceTV","Adform","PREROLL","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-27"],
+    ["FranceTV","AmplifiProg Amazon DSP","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-10-23"],
+    ["FranceTV","FranceTV","Adform","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["FranceTV","AmplifiProg All DSP","Adform","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-27"],
+    ["FranceTV","AmplifiProg All DSP","Adform","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["FranceTV","AmplifiProg All DSP","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["FranceTV","AmplifiProg All DSP","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-27"],
+    ["FranceTV","FranceTV","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["FranceTV","AmplifiProg All DSP","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["FranceTV","FranceTV","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["FranceTV","AmplifiProg Amazon DSP","CM","INSTREAMIPTV","TV","Adserver","Non","Oui","Non","Oui","2025-10-23"],
+    ["FranceTV","FranceTV","CM","PREROLL","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-08-27"],
+    ["FranceTV","AmplifiProg Amazon DSP","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["Indeed","Indeed","CM","ANNONCESPONSORISEE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-05-12"],
+    ["Indeed","Indeed","Adform","ANNONCESPONSORISEE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-05-12"],
+    ["LeBonCoin","LeBonCoin","CM","LINKAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","VIGNETTE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","IAB","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","LIENMOTEUR","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","ANNONCESPONSORISEE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","BOUTON","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","PARALLAX","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","INTERSTITIEL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","LIENMOTEUR","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","BOUTONLIENTEXTE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","LINKAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","PARALLAX","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","IMPACTDISPLAY","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","IMPACTDISPLAY","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","BOUTON","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","ANNONCESPONSORISEE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","INTERSTITIEL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","HABILLAGE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","CM","BOUTONLIENTEXTE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","IAB","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","VIGNETTE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["LeBonCoin","LeBonCoin","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["Linkedin","","Adform","VIDEOAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-08"],
+    ["Linkedin","","CM","VIDEOAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-08"],
+    ["M6","AmplifiProg All DSP","Adform","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","AmplifiProg All DSP","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["M6","AmplifiProg Amazon DSP","CM","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-10-23"],
+    ["M6","M6","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["M6","AmplifiProg Amazon DSP","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["M6","AmplifiProg Amazon DSP","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["M6","M6","CM","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["M6","AmplifiProg All DSP","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","AmplifiProg Amazon DSP","Adform","PREROLL","Desktop","Partenaire","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["M6","AmplifiProg Amazon DSP","Adform","PREROLL","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["M6","AmplifiProg All DSP","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","AmplifiProg All DSP","CM","INSTREAMIPTV","TV","Adserver","Non","Oui","Non","Oui","2025-08-25"],
+    ["M6","AmplifiProg Amazon DSP","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-10-23"],
+    ["M6","M6","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","M6","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","M6","Adform","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","AmplifiProg All DSP","Adform","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["M6","M6","Adform","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Meta","Meta","CM","STORYADVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","POSTSPONSO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","LEADAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","LINKADVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","VIDEOAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","FEEDAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","LINKAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["Meta","Meta","CM","REELS","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","POSTSPONSOVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","CARROUSEL","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","SPONSOREDMESSAGE","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","STORYADVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","LINKAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","SPONSOREDMESSAGE","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","LEADAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","INFEED","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","VIDEOAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","FEEDAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","INFEED","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","POSTSPONSOVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","REELS","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","CM","STORYAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","CARROUSEL","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","STORYAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","POSTSPONSO","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Meta","Meta","Adform","LINKADVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-04-18"],
+    ["Netflix","Xandr","Adform","PREROLL","Multidevice","Partenaire","Non","Non","Non","Non","2025-05-12"],
+    ["Netflix","TheTradeDesk","Adform","PREROLL","Multidevice","Partenaire","Non","Non","Non","Non","2025-05-12"],
+    ["Netflix","DV360","CM","PREROLL","Multidevice","Adserver","Non","Oui","Non","Oui","2025-05-12"],
+    ["Netflix","DV360","Adform","PREROLL","Multidevice","Partenaire","Non","Non","Non","Non","2025-05-12"],
+    ["Netflix","Xandr","CM","PREROLL","Multidevice","Partenaire","Non","Oui","Non","Oui","2025-05-12"],
+    ["Netflix","TheTradeDesk","CM","PREROLL","Multidevice","Adserver","Non","Oui","Non","Oui","2025-05-12"],
+    ["Ogury","","Adform","FULLSCREEN","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","Adform","BANNER","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","MOTIONFOOTER","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","CM","INARTICLE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","CM","THUMBNAIL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","VIDEOAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","CM","HEADER","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","BANNIERE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","BANNER","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","CM","FULLSCREEN","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","Adform","MOTIONFOOTER","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","Adform","INTERSTITIEL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","CM","INTERSTITIEL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","Adform","THUMBNAIL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","Adform","VIDEOAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","Adform","HEADER","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","Adform","BANNIERE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Ogury","","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Ogury","","Adform","INARTICLE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Outbrain","Outbrain","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["Outbrain","Outbrain","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["Pinterest","","Adform","STANDARDVIDEOAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Pinterest","","Adform","EPINGLESANNONCESSTATIQUES","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-08"],
+    ["Pinterest","","CM","STANDARDVIDEOAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Pinterest","","CM","EPINGLESANNONCESSTATIQUES","Multidevice","Partenaire","Oui","Non","Oui","Non","2025-08-25"],
+    ["Prisma","AmplifiProg All DSP","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Prisma","AmplifiProg All DSP","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["RTB House","","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","BANNIEREMOBILE","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","LEADERBOARD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","BANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","SKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","MASTHEAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","MEGABANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","MEGABANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","INTERSTITIEL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","BANNIEREMOBILE","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","LEADERBOARD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","BANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","MASTHEAD","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","SKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["RTB House","","CM","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["Reddit","Reddit","CM","VideoAd","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2026-02-05"],
+    ["Reddit","Reddit","CM","LinkAd","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2026-02-05"],
+    ["Reddit","Reddit","Adform","VideoAd","Multidevice","Partenaire","Non","Non","Non","Non","2026-02-05"],
+    ["Reddit","Reddit","Adform","LinkAd","Multidevice","Partenaire","Non","Non","Non","Non","2026-02-05"],
+    ["Seedtag","Seedtag","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Seedtag","Seedtag","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Snapchat","Snapchat","Adform","SNAPADVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","LEADADVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","SNAPAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","STORYADVIDEO","MobTab","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","STORYADVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","LENS","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","STORYAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","LEADAD","MobTab","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","LEADAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","LENS","MobTab","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","VIDEOAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","COMMERCIALAD","MobTab","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","COMMERCIALAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","SNAPADVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","SNAPAD","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","STORYADVIDEO","MobTab","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","STORYADVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","INFEEDVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","CM","INFEEDVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","STORYAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","LEADAD","MobTab","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","LEADAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","COMMERCIALAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","LENS","MobTab","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","LENS","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","LEADADVIDEO","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","VIDEOAD","Multidevice","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["Snapchat","Snapchat","Adform","COMMERCIALAD","MobTab","Partenaire","Oui","Non","Oui","Non","2026-02-04"],
+    ["TF1","AmplifiProg Amazon DSP","CM","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-10-23"],
+    ["TF1","AmplifiProg Amazon DSP","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["TF1","AmplifiProg Amazon DSP","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["TF1","TF1","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","TF1","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","AmplifiProg All DSP","CM","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","AmplifiProg All DSP","CM","INSTREAMIPTV","TV","Adserver","Non","Oui","Non","Oui","2025-08-25"],
+    ["TF1","TF1","CM","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["TF1","AmplifiProg Amazon DSP","Adform","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["TF1","AmplifiProg All DSP","CM","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","AmplifiProg Amazon DSP","Adform","PREROLL","Desktop","Partenaire","Oui","Oui","Oui","Oui","2025-10-23"],
+    ["TF1","AmplifiProg Amazon DSP","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-10-23"],
+    ["TF1","TF1","Adform","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","TF1","Adform","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","AmplifiProg All DSP","Adform","PREROLL","MobTab","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","AmplifiProg All DSP","Adform","PREROLL","Desktop","Adserver","Oui","Oui","Oui","Oui","2025-08-25"],
+    ["TF1","AmplifiProg All DSP","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["TF1","TF1","Adform","INSTREAMIPTV","TV","Partenaire","Non","Oui","Non","Oui","2025-08-25"],
+    ["Teads","Teads","Adform","NATIVEAD","Desktop","","","","","",""],
+    ["Teads","Teads","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Teads","Teads","CM","INREAD","Multidevice","","","","","",""],
+    ["Teads","Teads","CM","NATIVEAD","Desktop","","","","","",""],
+    ["Teads","Teads","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Teads","Teads","Adform","INREAD","Multidevice","","","","","",""],
+    ["TikTok","TikTok","Adform","CARROUSELADVIDEO","MobTab","N/A","N/A","N/A","N/A","N/A",""],
+    ["TikTok","TikTok","CM","LINKAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","FEEDAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","CARROUSELADVIDEO","MobTab","N/A","N/A","N/A","N/A","N/A",""],
+    ["TikTok","TikTok","CM","TOPVIEW","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","VIDEOSPONSORISEE","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","SPARKAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","TOPFEED","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","INFEED","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","CARROUSEL","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","SPARKAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","LEADAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","INFEEDVIDEO","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","LEADAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","LEADGEN","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","FEEDAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","BANNER","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","PULSE","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","PULSE","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","TOPVIEW","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","CM","BANNER","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","VIDEOSPONSORISEE","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","LINKAD","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","LEADGEN","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","TOPFEED","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","INFEED","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","CARROUSEL","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["TikTok","TikTok","Adform","INFEEDVIDEO","MobTab","Partenaire","Oui","Oui","Oui","Oui","2025-04-18"],
+    ["Twitch","","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Twitch","","Adform","MIDROLL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Twitch","","CM","MIDROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Twitch","","Adform","PREROLL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","MEGASKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","HABILLAGEVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","SKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","MEGABANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","BANNER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","GRANDANGLE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","PAVE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","CM","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","HABILLAGEVIDEO","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","SKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","MEGASKYSCRAPER","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","PREROLL","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Weborama","","Adform","MEGABANNIERE","Multidevice","Adserver","Oui","Oui","Oui","Oui","2025-08-08"],
+    ["Youtube","Youtube","CM","INFEED","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","CONTEXTUALNATIVE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","INSTREAM","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","TRUEVIEW_DISCOVERY","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","TRUEVIEW_SKIPPABLE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","TRUEVIEW_NONSKIPPABLE","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","PREROLL","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","DEMANDGEN","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","CM","TRUEVIEW","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-04-24"],
+    ["Youtube","Youtube","Adform","LEADAD","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","INFEED","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","CM","LEADAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-05-12"],
+    ["Youtube","Youtube","Adform","CONTEXTUALNATIVE","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","INSTREAM","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","TRUEVIEW_DISCOVERY","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","TRUEVIEW_SKIPPABLE","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","TRUEVIEW_NONSKIPPABLE","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","PREROLL","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","DEMANDGEN","Multidevice","Partenaire","Oui","Non","Non","Non","2025-05-12"],
+    ["Youtube","Youtube","Adform","TRUEVIEW","Multidevice","Partenaire","Oui","Non","Non","Non","2025-04-24"],
+  ];
+const SEED_ADVERIF = [
+    ["Adot","CM","Multidevice","IAS","MEGABANNIERE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","IAS","SKYSCRAPER","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","SKYSCRAPER","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","BANNIERE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","BANNIERE","Oui","Oui","Oui","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","PAVE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","GRANDANGLE","Oui","Oui","Oui","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","HABILLAGE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","SKYSCRAPER","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","HABILLAGE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","MEGABANNIERE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","MobTab","IAS","HABILLAGE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","HABILLAGE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","IAS","GRANDANGLE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","MEGABANNIERE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","MEGABANNIERE","Oui","Oui","Oui","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","SKYSCRAPER","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","GRANDANGLE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","PAVE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","IAS","PAVE","Oui","Oui","Oui","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","IAS","BANNIERE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","IAS","PAVE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","GRANDANGLE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","CM","Multidevice","IAS","HABILLAGE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adot","Adform","Multidevice","Double Verify","BANNIERE","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Adyoulike","CM","Multidevice","","STORYAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","PAVE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","","PAVE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","LEADAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","IAS","NATIVEAD","Oui","Oui","Oui","Mapping","2025-09-08"],
+    ["Adyoulike","Adform","Multidevice","","POSTSPONSO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","GRANDANGLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","","LEADAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","","STORYAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","NATIVEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","","GRANDANGLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","Adform","Multidevice","","CONVERSATIONALAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","CONVERSATIONALAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Adyoulike","CM","Multidevice","","POSTSPONSO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Amazon Prime","CM","Multidevice","IAS","PREROLL","Non","Oui","Oui","Multimedia Tag Monitoring","2025-05-07"],
+    ["Amazon Prime","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amazon Prime","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amazon Prime","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","BANNER","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","INREAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","INREAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","AUDIO","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","SOCIALADSEXTENSION","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","SOCIALADSEXTENSION","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","BANNER","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","NATIVEAD","Non","Oui","Oui","Pixel IAS à implémenter","2025-04-24"],
+    ["Amnet","CM","Multidevice","Double Verify","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","HABILLAGE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","INSTREAMTVPROG","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","AUDIO","TBC","TBC","TBC","TBC","2025-04-24"],
+    ["Amnet","Adform","Desktop","IAS","HABILLAGE","Oui","Oui","Oui","Pixel IAS à implémenter","2025-04-24"],
+    ["Amnet","CM","Multidevice","IAS","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","INREAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","HABILLAGE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","AUDIO","TBC","TBC","TBC","TBC","2025-04-24"],
+    ["Amnet","Adform","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","INREAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","INSTREAMTVPROG","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","SOCIALADSEXTENSION","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2025-04-24"],
+    ["Amnet","CM","Multidevice","IAS","HABILLAGE","TBC","TBC","TBC","TBC","2025-04-24"],
+    ["Amnet","Adform","Multidevice","IAS","SOCIALADSEXTENSION","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","BANNER","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","INSTREAMTVPROG","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","AUDIO","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","INSTREAMTVPROG","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","IAS","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Amnet","Adform","Multidevice","Double Verify","BANNER","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Azerion","Adform","Multidevice","","INGAME","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","INGAME","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","BANNER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","MEGABANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","MASTHEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","PROFILSPONSORISE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","INSTREAM","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","GRANDANGLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","IAS","MEGASKYSCRAPER","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","CM","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","HABILLAGE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","VIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","PAVE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","IAS","BANNER","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","Adform","Multidevice","IAS","MASTHEAD","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","Adform","Multidevice","IAS","MEGABANNIERE","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","CM","Multidevice","","MEGASKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","AUDIO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","","SPOTAUDIO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","","AUDIO","TBC","TBC","TBC","N/A","2025-02-21"],
+    ["Azerion","Adform","Multidevice","IAS","HABILLAGE","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","Adform","Multidevice","IAS","PAVE","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","CM","Multidevice","","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","CM","Multidevice","","SPOTAUDIO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","IAS","INTERSTITIEL","Oui","Oui","Oui","Mapping","2025-09-08"],
+    ["Azerion","Adform","Multidevice","","VIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","","PROFILSPONSORISE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","","INSTREAM","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Azerion","Adform","Multidevice","IAS","BANNIERE","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","CM","Multidevice","IAS","NATIVEAD","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","Adform","Multidevice","IAS","GRANDANGLE","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","Adform","Multidevice","IAS","NATIVEAD","Oui","Oui","Oui","TBC","2025-09-08"],
+    ["Azerion","Adform","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["BeReal","CM","MobTab","","VIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["BeReal","CM","MobTab","","IMAGEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["BeReal","Adform","MobTab","","IMAGEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["BeReal","Adform","MobTab","","VIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Criteo","CM","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","Double Verify","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","IAS","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","Double Verify","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","IAS","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","Double Verify","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","Double Verify","IMAGEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","IAS","IMAGEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","IAS","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","Double Verify","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","Double Verify","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","IAS","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","IAS","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","Double Verify","IMAGEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","CM","Multidevice","Double Verify","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","IAS","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Criteo","Adform","Multidevice","IAS","IMAGEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Dailymotion","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2026-03-05"],
+    ["Dailymotion","Adform","Multidevice","IAS","PREROLL","Oui","Oui","Oui","Multimedia Tag Blocking","2026-03-05"],
+    ["Dailymotion","CM","Multidevice","IAS","PREROLL","Oui","Oui","Oui","VPAID Block","2026-03-05"],
+    ["Dailymotion","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2026-03-05"],
+    ["DisneyPlus","Adform","Multidevice","","PREROLL","Oui","Oui","Oui","Unified pixel video","2025-11-26"],
+    ["FranceTV","CM","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-07-28"],
+    ["FranceTV","Adform","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["FranceTV","Adform","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["FranceTV","CM","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["FranceTV","Adform","Desktop","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["FranceTV","CM","Desktop","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["FranceTV","Adform","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-07-28"],
+    ["FranceTV","CM","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["FranceTV","Adform","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-07-28"],
+    ["Indeed","Adform","Multidevice","Double Verify","ANNONCESPONSORISEE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Indeed","CM","Multidevice","IAS","ANNONCESPONSORISEE","Non","Non","Non","TBC","2025-05-06"],
+    ["Indeed","CM","Multidevice","Double Verify","ANNONCESPONSORISEE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Indeed","Adform","Multidevice","IAS","ANNONCESPONSORISEE","Non","Non","Non","TBC","2025-05-06"],
+    ["LeBonCoin","CM","Multidevice","IAS","BOUTON","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","IMPACTDISPLAY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","PARALLAX","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","LINKAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","HABILLAGE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","ANNONCESPONSORISEE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","PARALLAX","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","PARALLAX","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","IMPACTDISPLAY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","BOUTON","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","VIGNETTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","PARALLAX","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","VIGNETTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","BOUTONLIENTEXTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","LINKAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","LINKAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","LIENMOTEUR","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","ANNONCESPONSORISEE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","LIENMOTEUR","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","HABILLAGE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","BOUTONLIENTEXTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","IMPACTDISPLAY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","BOUTON","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","IMPACTDISPLAY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","BOUTON","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","HABILLAGE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","HABILLAGE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","IAB","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","IAS","ANNONCESPONSORISEE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","LINKAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","ANNONCESPONSORISEE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","VIGNETTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","VIGNETTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","CM","Multidevice","Double Verify","LIENMOTEUR","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","BOUTONLIENTEXTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","BOUTONLIENTEXTE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["LeBonCoin","Adform","Multidevice","IAS","LIENMOTEUR","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Linkedin","CM","Multidevice","IAS","VIDEOAD","Oui","Non","Oui","Pixel IAS à implémenter","2025-07-17"],
+    ["Linkedin","Adform","Multidevice","IAS","VIDEOAD","Oui","Non","Oui","Pixel IAS à implémenter","2025-07-17"],
+    ["M6","Adform","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["M6","CM","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["M6","CM","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-07-28"],
+    ["M6","CM","Desktop","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["M6","CM","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["M6","Adform","Desktop","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["M6","Adform","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["M6","Adform","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-07-28"],
+    ["Meta","Adform","Multidevice","IAS","INFEED","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","VIDEOAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","VIDEOAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","FEEDAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","CARROUSEL","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","STORYADVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","STORYADVIDEO","Non","Non","Oui","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","SPONSOREDMESSAGE","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","REELS","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","REELS","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","POSTSPONSOVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","STORYAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","CARROUSEL","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","SPONSOREDMESSAGE","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","POSTSPONSOVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","INFEED","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","POSTSPONSO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","STORYAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","LINKADVIDEO","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","LINKADVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","FEEDAD","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","POSTSPONSO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","LINKAD","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","SPONSOREDMESSAGE","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","LINKAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","INFEED","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","IAS","LEADAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","LEADAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","INFEED","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","LEADAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","VIDEOAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","FEEDAD","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","FEEDAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","STORYADVIDEO","Non","Non","Oui","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","STORYADVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","SPONSOREDMESSAGE","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","Adform","Multidevice","Double Verify","LINKAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","REELS","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","REELS","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","VIDEOAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","POSTSPONSOVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","POSTSPONSOVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","STORYAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","LEADAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","POSTSPONSO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","POSTSPONSO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","STORYAD","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","LINKADVIDEO","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","CARROUSEL","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","CARROUSEL","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","Double Verify","LINKADVIDEO","TBC","TBC","TBC","Mapping","2026-02-19"],
+    ["Meta","CM","Multidevice","IAS","LINKAD","Oui","Oui","Oui","Mapping","2026-02-19"],
+    ["Netflix","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Netflix","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Netflix","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Netflix","CM","Multidevice","IAS","PREROLL","Oui","Non","Oui","Pixel IAS à implémenter","2025-11-26"],
+    ["Netflix","CM","Multidevice","IAS","PREROLL","Oui","Non","Oui","NON VPAID","2025-11-26"],
+    ["Ogury","Adform","Multidevice","","FULLSCREEN","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","INARTICLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","BANNER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","NATIVEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","HEADER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","THUMBNAIL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","VIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","INARTICLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","BANNER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","FULLSCREEN","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","CM","Multidevice","","MOTIONFOOTER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","MOTIONFOOTER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","NATIVEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","THUMBNAIL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","VIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","HEADER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Ogury","Adform","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Outbrain","CM","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2025-04-24"],
+    ["Outbrain","CM","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Outbrain","Adform","Multidevice","IAS","NATIVEAD","Oui","Oui","Oui","Pixel IAS à implémenter","2025-04-24"],
+    ["Outbrain","Adform","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Pinterest","Adform","Multidevice","","EPINGLESANNONCESSTATIQUES","Oui","Oui","Oui","Pixel IAS à implémenter","2025-07-25"],
+    ["Pinterest","CM","Multidevice","","STANDARDVIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Pinterest","CM","Multidevice","","EPINGLESANNONCESSTATIQUES","Oui","Oui","Oui","Pixel IAS à implémenter","2025-07-25"],
+    ["Pinterest","Adform","Multidevice","","STANDARDVIDEOAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Prisma","CM","Multidevice","IAS","PREROLL","Oui","Oui","Oui","VPAID Block","2025-05-07"],
+    ["Prisma","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Prisma","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Prisma","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["RTB House","Adform","MobTab","","BANNIEREMOBILE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","SKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","MobTab","","BANNIEREMOBILE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","LEADERBOARD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","MASTHEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","INTERSTITIEL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","MEGABANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","PAVE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","GRANDANGLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","NATIVEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","CM","Multidevice","","BANNER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","Adform","Multidevice","","LEADERBOARD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","Adform","Multidevice","","BANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","Adform","Multidevice","","MASTHEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","Adform","Multidevice","","SKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["RTB House","Adform","Multidevice","IAS","MASTHEAD","Oui","Oui","Oui","Display Block","2026-03-18"],
+    ["RTB House","Adform","Multidevice","IAS","MEGABANNIERE","Oui","Oui","Oui","Display Block","2026-03-18"],
+    ["RTB House","Adform","Multidevice","IAS","PAVE","Oui","Oui","Oui","Display Block","2026-03-18"],
+    ["RTB House","Adform","Multidevice","IAS","GRANDANGLE","Oui","Oui","Oui","Display Block","2026-03-18"],
+    ["RTB House","Adform","Multidevice","IAS","NATIVEAD","Non","Oui","Oui","Display Monitor","2026-03-18"],
+    ["Reddit","CM","Multidevice","Double Verify","VideoAd","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Reddit","CM","Multidevice","IAS","LinkAd","Oui","Oui","Oui","TBC","2025-02-21"],
+    ["Reddit","Adform","Multidevice","Double Verify","VideoAd","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Reddit","Adform","Multidevice","IAS","LinkAd","Oui","Oui","Oui","TBC","2025-02-21"],
+    ["Seedtag","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2025-05-06"],
+    ["Seedtag","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Seedtag","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Seedtag","CM","Multidevice","IAS","PREROLL","Oui","Oui","Oui","VPAID Block","2025-05-06"],
+    ["Snapchat","Adform","Multidevice","Double Verify","SNAPAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","LEADAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","MobTab","IAS","STORYADVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","MobTab","IAS","LENS","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","INFEEDVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","INFEEDVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","LENS","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","STORYAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","STORYAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","MobTab","IAS","LEADAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","LEADADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","VIDEOAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","VIDEOAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","MobTab","IAS","COMMERCIALAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","SNAPADVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","SNAPADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","IAS","SNAPAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","COMMERCIALAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","SNAPAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","MobTab","IAS","STORYADVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","LEADADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","STORYADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","INFEEDVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","INFEEDVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","STORYAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","STORYAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","MobTab","IAS","LEADAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","LEADAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","MobTab","IAS","LENS","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","CM","Multidevice","Double Verify","STORYADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","LENS","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","LEADADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","LEADADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","VIDEOAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","VIDEOAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","MobTab","IAS","COMMERCIALAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","COMMERCIALAD","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","SNAPADVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","Double Verify","SNAPADVIDEO","TBC","TBC","TBC","TBC","2026-03-16"],
+    ["Snapchat","Adform","Multidevice","IAS","SNAPAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-16"],
+    ["TF1","CM","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["TF1","CM","TV","IAS","INSTREAMIPTV","Non","Oui","Oui","TBC","2026-03-18"],
+    ["TF1","CM","MobTab","IAS","PREROLL","Oui","Oui","Oui","TBC","2026-03-18"],
+    ["TF1","CM","Desktop","IAS","PREROLL","Oui","Oui","Oui","TBC","2026-03-18"],
+    ["TF1","CM","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["TF1","Adform","MobTab","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["TF1","Adform","Desktop","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["TF1","Adform","TV","","INSTREAMIPTV","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["TF1","CM","Desktop","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Teads","Adform","Desktop","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","Adform","Multidevice","IAS","PREROLL","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","Adform","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","CM","Multidevice","IAS","INREAD","Oui","Oui","Oui","VPAID Block","2026-03-18"],
+    ["Teads","CM","Multidevice","Double Verify","INREAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","CM","Desktop","IAS","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","CM","Desktop","Double Verify","NATIVEAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","CM","Multidevice","IAS","PREROLL","Oui","Oui","Oui","VPAID Block","2026-03-18"],
+    ["Teads","CM","Multidevice","Double Verify","PREROLL","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","Adform","Multidevice","IAS","INREAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","Adform","Multidevice","Double Verify","INREAD","TBC","TBC","TBC","TBC","2026-03-18"],
+    ["Teads","Adform","Desktop","IAS","NATIVEAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-03-18"],
+    ["TikTok","Adform","MobTab","IAS","CARROUSELADVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","INFEEDVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","CARROUSELADVIDEO","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","FEEDAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","FEEDAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","VIDEOSPONSORISEE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","BANNER","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","PULSE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","PULSE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","INFEEDVIDEO","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","TOPVIEW","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","TOPVIEW","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","VIDEOSPONSORISEE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","LINKAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","LEADGEN","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","LEADGEN","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","TOPFEED","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","INFEED","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","INFEED","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","CARROUSEL","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","CARROUSEL","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","SPARKAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","SPARKAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","LEADAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","LEADAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","CARROUSELADVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","CM","MobTab","Double Verify","CARROUSELADVIDEO","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","FEEDAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","FEEDAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","BANNER","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","BANNER","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","PULSE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","PULSE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","TOPFEED","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","TOPVIEW","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","TOPVIEW","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","VIDEOSPONSORISEE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","VIDEOSPONSORISEE","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","LINKAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","LINKAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","LINKAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","LEADGEN","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","LEADGEN","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","TOPFEED","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","TOPFEED","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","CM","MobTab","IAS","BANNER","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","INFEED","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","INFEED","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","CARROUSEL","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","CARROUSEL","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","SPARKAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","SPARKAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","LEADAD","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","LEADAD","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["TikTok","Adform","MobTab","IAS","INFEEDVIDEO","Oui","Oui","Oui","Pixel IAS à implémenter","2026-02-20"],
+    ["TikTok","Adform","MobTab","Double Verify","INFEEDVIDEO","TBC","TBC","TBC","TBC","2026-02-20"],
+    ["Twitch","Adform","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Twitch","CM","Multidevice","","MIDROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Twitch","CM","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Twitch","Adform","Multidevice","","MIDROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","NATIVEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","PAVE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","BANNER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","GRANDANGLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","SKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","MEGASKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","MEGABANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","BANNER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","GRANDANGLE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","PAVE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","HABILLAGEVIDEO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","CM","Multidevice","","NATIVEAD","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","HABILLAGEVIDEO","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","SKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","MEGASKYSCRAPER","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","PREROLL","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Weborama","Adform","Multidevice","","MEGABANNIERE","TBC","TBC","TBC","TBC","2025-02-21"],
+    ["Youtube","Adform","Multidevice","Double Verify","CONTEXTUALNATIVE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","IAS","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","Double Verify","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","IAS","TRUEVIEW_DISCOVERY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","Double Verify","TRUEVIEW_DISCOVERY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","IAS","TRUEVIEW_SKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","Double Verify","TRUEVIEW_SKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","IAS","CONTEXTUALNATIVE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","IAS","TRUEVIEW_NONSKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","Double Verify","TRUEVIEW_NONSKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","IAS","PREROLL","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","Double Verify","PREROLL","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","IAS","DEMANDGEN","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","Double Verify","DEMANDGEN","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","IAS","TRUEVIEW","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","Double Verify","LEADAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","INFEED","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","Double Verify","INFEED","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","CONTEXTUALNATIVE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","Double Verify","CONTEXTUALNATIVE","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","Double Verify","INSTREAM","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","TRUEVIEW_DISCOVERY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","Double Verify","TRUEVIEW_DISCOVERY","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","TRUEVIEW_SKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","Double Verify","TRUEVIEW_SKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","IAS","TRUEVIEW_NONSKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","Double Verify","TRUEVIEW_NONSKIPPABLE","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","IAS","PREROLL","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","Double Verify","PREROLL","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","IAS","LEADAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","DEMANDGEN","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","Double Verify","DEMANDGEN","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","CM","Multidevice","IAS","TRUEVIEW","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","CM","Multidevice","Double Verify","TRUEVIEW","Oui","Oui","Oui","Mapping","2025-04-28"],
+    ["Youtube","Adform","Multidevice","IAS","LEADAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","Double Verify","LEADAD","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","IAS","INFEED","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","Double Verify","INFEED","TBC","TBC","TBC","TBC","2025-05-07"],
+    ["Youtube","Adform","Multidevice","Double Verify","TRUEVIEW","Oui","Oui","Oui","Mapping","2025-04-28"],
+  ];
+
+/* ===================== Coffre local : IndexedDB + miroir localStorage + chiffrement ===================== */
+const IDB = (() => {
+  let db = null;
+  const ready = new Promise((res) => {
+    if (!window.indexedDB) return res(null);
+    const r = indexedDB.open("adops-db", 2);
+    r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains("kv")) r.result.createObjectStore("kv", { keyPath: "k" }); };
+    r.onsuccess = () => { db = r.result; res(db); };
+    r.onerror = () => res(null);
+  });
+  return {
+    async get(k) {
+      await ready;
+      if (!db) return null;
+      return new Promise((res) => { const rq = db.transaction("kv").objectStore("kv").get(k); rq.onsuccess = () => res(rq.result ? rq.result.v : null); rq.onerror = () => res(null); });
+    },
+    async set(k, v) {
+      await ready;
+      if (!db) return false;
+      return new Promise((res) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put({ k, v }); tx.oncomplete = () => res(true); tx.onerror = () => res(false); });
+    },
+    async del(k) { await ready; if (!db) return; const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").delete(k); },
+  };
+})();
+
+const ENC = new TextEncoder(), DEC = new TextDecoder();
+const b64 = (buf) => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)).buffer;
+async function deriveKey(pass, salt) {
+  const km = await crypto.subtle.importKey("raw", ENC.encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt: new Uint8Array(salt), iterations: 250000, hash: "SHA-256" }, km, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function encryptVal(key, v) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, ENC.encode(JSON.stringify(v)));
+  return { e: 1, iv: Array.from(iv), ct: b64(ct) };
+}
+async function decryptVal(key, p) {
+  const buf = await crypto.subtle.decrypt({ name: "AES-GCM", iv: new Uint8Array(p.iv) }, key, unb64(p.ct));
+  return JSON.parse(DEC.decode(buf));
+}
+
+const DESKTOP = typeof window !== "undefined" && !!window.desktop;
+
+const Vault = {
+  key: null, meta: null,
+  async raw(k) {
+    if (DESKTOP) return window.desktop.get(k);
+    let v = await IDB.get(k);
+    if (v == null) { const s = localStorage.getItem("adops_" + k); v = s ? JSON.parse(s) : null; }
+    return v;
+  },
+  async get(k) {
+    const v = await this.raw(k);
+    if (v && v.e) { if (!this.key) throw new Error("locked"); return decryptVal(this.key, v); }
+    return v;
+  },
+  /* double écriture : la donnée survit à la perte d'un des deux magasins */
+  async set(k, v) {
+    const payload = this.key ? await encryptVal(this.key, v) : v;
+    if (DESKTOP) return window.desktop.set(k, payload);
+    const ok = await IDB.set(k, payload);
+    try { localStorage.setItem("adops_" + k, JSON.stringify(payload)); } catch (e) { /* quota */ }
+    return ok;
+  },
+};
+
+/* --- versions successives : 20 dernières sauvegardes, restaurables --- */
+async function pushSnapshot() {
+  let snaps = [];
+  try { snaps = (await Vault.get("snapshots")) || []; } catch (e) { snaps = []; }
+  snaps.unshift({ t: new Date().toISOString(), campaigns: state.campaigns, adserver: state.adserver, adverif: state.adverif });
+  await Vault.set("snapshots", snaps.slice(0, 20));
+}
+
+/* --- sauvegarde automatique dans un dossier du poste (OneDrive, disque réseau…) --- */
+const Backup = {
+  dir: null, lastDay: null,
+  async init() {
+    if (DESKTOP) { const p = await window.desktop.paths(); this.dirLabel = p.backup; state.backup = p.backup ? "actif" : "non configuré"; state.dataPath = p.data; return; }
+    this.dir = await IDB.get("backupDir");
+    this.lastDay = localStorage.getItem("adops_lastBackupDay");
+    if (this.dir) { const p = await this.dir.queryPermission({ mode: "readwrite" }); state.backup = p === "granted" ? "actif" : "à réautoriser"; }
+    else state.backup = window.showDirectoryPicker ? "non configuré" : "non disponible";
+  },
+  async choose() {
+    if (DESKTOP) { const d = await window.desktop.chooseBackup(); this.dirLabel = d; state.backup = d ? "actif" : "non configuré"; if (d) await this.write(true); return render(); }
+    if (!window.showDirectoryPicker) return alert("Ce navigateur ne permet pas la sauvegarde automatique dans un dossier. Utilisez le bouton Sauvegarder.");
+    try {
+      this.dir = await window.showDirectoryPicker({ mode: "readwrite" });
+      await IDB.set("backupDir", this.dir);
+      state.backup = "actif"; await this.write(true); render();
+    } catch (e) { /* annulé */ }
+  },
+  async grant() { if (!this.dir) return; const p = await this.dir.requestPermission({ mode: "readwrite" }); state.backup = p === "granted" ? "actif" : "refusé"; render(); },
+  async write(force) {
+    if (DESKTOP) {
+      const r = await window.desktop.writeBackup(JSON.stringify(exportObj(), null, 1), !!force);
+      if (r && String(r).startsWith("ERR:")) { state.backup = "échec d'écriture"; return; }
+      if (r) { state.backup = "actif"; state.saved = "enregistré + sauvegardé " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); paintStatus(); }
+      return;
+    }
+    if (!this.dir) return;
+    if ((await this.dir.queryPermission({ mode: "readwrite" })) !== "granted") { state.backup = "à réautoriser"; return; }
+    const payload = JSON.stringify(exportObj(), null, 1);
+    const put = async (name) => { const fh = await this.dir.getFileHandle(name, { create: true }); const w = await fh.createWritable(); await w.write(payload); await w.close(); };
+    try {
+      await put("adops-sauvegarde.json");
+      const d = todayISO();
+      if (force || this.lastDay !== d) { await put("adops-sauvegarde-" + d + ".json"); this.lastDay = d; localStorage.setItem("adops_lastBackupDay", d); }
+      state.backup = "actif"; state.saved = "enregistré + sauvegardé " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      paintStatus();
+    } catch (e) { state.backup = "échec d'écriture"; }
+  },
+};
+const exportObj = () => ({ v: 2, date: new Date().toISOString(), campaigns: state.campaigns, adserver: state.adserver, adverif: state.adverif });
+
+/* --- verrouillage --- */
+let idleTimer = null;
+function armIdle() {
+  if (!Vault.meta || !Vault.meta.enc) return;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { Vault.key = null; state.locked = true; state.drawer = null; state.imp = null; render(); }, 15 * 60 * 1000);
+}
+["click", "keydown"].forEach((ev) => document.addEventListener(ev, armIdle, true));
+
+async function setPasscode(pass) {
+  const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)));
+  const key = await deriveKey(pass, salt);
+  Vault.key = key;
+  Vault.meta = { enc: true, salt, check: await encryptVal(key, "ok") };
+  await IDB.set("meta", Vault.meta);
+  localStorage.setItem("adops_meta", JSON.stringify(Vault.meta));
+  await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif), Vault.set("snapshots", [])]);
+}
+async function removePasscode() {
+  Vault.key = null; Vault.meta = { enc: false };
+  await IDB.set("meta", Vault.meta);
+  localStorage.setItem("adops_meta", JSON.stringify(Vault.meta));
+  await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif), Vault.set("snapshots", [])]);
+}
+async function unlock(pass) {
+  try {
+    const key = await deriveKey(pass, Vault.meta.salt);
+    await decryptVal(key, Vault.meta.check);
+    Vault.key = key; state.locked = false; armIdle();
+    await loadAll();
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ===================== Modèle ===================== */
+const GATES = [
+  { k: "pm", l: "PM reçu", step: "Validation frais Tracking" },
+  { k: "frais", l: "Frais validés + ID agence", step: "Plan de specs" },
+  { k: "specs", l: "Plan de specs envoyé", step: "En attente créas" },
+  { k: "creas", l: "Créas reçues", step: "En attente - tags" },
+  { k: "tag", l: "Plan de taggage envoyé", step: "Création outils tiers", tagOnly: 1 },
+  { k: "trac", l: "Traceurs / TP filter posés", step: "Programmation régie", tagOnly: 1 },
+  { k: "regie", l: "Trafficking régies fait", step: "MEL en cours" },
+  { k: "mel", l: "Recettage MEL validé", step: "En ligne" },
+  { k: "pause", l: "Tags en pause + nettoyage tiers", step: "Finie - en attente BDD" },
+  { k: "bdd", l: "Bilan de diffusion reçu", step: "A réconcilier" },
+  { k: "reco", l: "Réconciliation facturation", step: "Réconciliée" },
+  { k: "fi", l: "Suivi Fi clôturé", step: "Terminée" },
+];
+const PHASES = [
+  { key: "Cadrage", steps: ["Réception PM", "Validation frais Tracking", "Plan de specs"] },
+  { key: "Production", steps: ["En attente créas", "En attente - tags", "Création outils tiers"] },
+  { key: "Diffusion", steps: ["Programmation régie", "MEL en cours", "En ligne"] },
+  { key: "Clôture", steps: ["Finie - en attente BDD", "A réconcilier", "Réconciliée", "Terminée"] },
+];
+const STEP_PHASE = {}; PHASES.forEach((p) => p.steps.forEach((s) => (STEP_PHASE[s] = p.key)));
+const UTM_KEYS = [["source", "utm_source"], ["medium", "utm_medium"], ["campaign", "utm_campaign"], ["content", "utm_content"], ["term", "utm_term"]];
+
+const gatesFor = (c) => GATES.filter((g) => !g.tagOnly || c.tagOn);
+const stepOf = (c) => { const gs = gatesFor(c); let i = -1; gs.forEach((g, n) => { if (c.tasks && c.tasks[g.k] && c.tasks[g.k].ok) i = Math.max(i, n); }); return i < 0 ? "Réception PM" : gs[i].step; };
+const nextGate = (c) => gatesFor(c).find((g) => !(c.tasks && c.tasks[g.k] && c.tasks[g.k].ok)) || null;
+const doneN = (c) => gatesFor(c).filter((g) => c.tasks && c.tasks[g.k] && c.tasks[g.k].ok).length;
+
+const DAY = 864e5;
+const parseD = (s) => (s ? new Date(s + "T00:00:00") : null);
+const diffD = (a, b) => Math.round((a - b) / DAY);
+const fmtD = (s) => { const d = parseD(s); return d ? d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" }) : "—"; };
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const lbl = (c) => [c.c || "Client à définir", c.a || "adserver à définir", c.id || "sans ID agence"].join(" - ");
+const taggedUrl = (url, utm) => {
+  if (!url) return "";
+  const qs = UTM_KEYS.filter(([f]) => utm && utm[f]).map(([f, p]) => p + "=" + encodeURIComponent(utm[f])).join("&");
+  return qs ? url + (url.indexOf("?") >= 0 ? "&" : "?") + qs : url;
+};
+const UTM0 = { source: "", medium: "", campaign: "", content: "", term: "" };
+const norm = (c) => Object.assign({ tagOn: false, tagType: "", lps: [], utmOn: false, tasks: {}, n: "", rg: "", p: "" }, c, { utm: Object.assign({}, UTM0, c.utm || {}) });
+
+function alertsFor(c) {
+  const T0 = new Date(todayISO() + "T00:00:00"), a = [];
+  const d1 = parseD(c.d1), d2 = parseD(c.d2), g = nextGate(c), s = c.s;
+  const notLive = ["En ligne", "MEL en cours", "Finie - en attente BDD", "A réconcilier", "Réconciliée", "Terminée"].indexOf(s) < 0;
+  if (d2 && s === "En ligne" && d2 < T0) a.push({ lvl: 2, r: "Fin dépassée", t: "Fin le " + fmtD(c.d2) + " — cocher « " + (g ? g.l : "clôture") + " » pour clôturer" });
+  if (d1 && notLive && d1 < T0) a.push({ lvl: 2, r: "Départ dépassé", t: "Départ le " + fmtD(c.d1) + " et encours bloquant : " + (g ? g.l : "—") });
+  if (d1 && notLive && d1 >= T0 && diffD(d1, T0) <= 7) a.push({ lvl: 1, r: "J-" + diffD(d1, T0), t: "Encours à traiter avant départ : " + (g ? g.l : "—") });
+  if (d2 && s === "A réconcilier" && diffD(T0, d2) > 30) a.push({ lvl: diffD(T0, d2) > 90 ? 2 : 1, r: "Réconciliation", t: "Terminée depuis " + diffD(T0, d2) + " j, facturation non rapprochée" });
+  if (s === "Finie - en attente BDD" && d2 && diffD(T0, d2) > 15) a.push({ lvl: 1, r: "BDD", t: "Bilan de diffusion attendu depuis " + diffD(T0, d2) + " j" });
+  if (!c.t && ["En ligne", "MEL en cours", "Programmation régie"].indexOf(s) >= 0) a.push({ lvl: 1, r: "Ticket", t: "Pas de ticket Issue rattaché alors que la campagne est en production" });
+  if (!c.id && c.tasks && c.tasks.frais && c.tasks.frais.ok) a.push({ lvl: 1, r: "ID agence", t: "ID agence manquant — suivi financier impossible" });
+  if (c.tagOn && !(c.lps || []).some((l) => l.url)) a.push({ lvl: 1, r: "Taggage", t: "Taggage activé mais aucune landing page renseignée" });
+  if (c.tagOn && c.utmOn && !(c.utm.source && c.utm.medium && c.utm.campaign)) a.push({ lvl: 1, r: "UTM", t: "UTM incomplets : source, medium et campaign sont requis" });
+  return a;
+}
+
+/* ===================== Référentiels ===================== */
+const ADS_COLS = [
+  { k: "pa", l: "Partenaire", syn: ["partenaire"] }, { k: "pu", l: "Publisher / DSP", syn: ["publisher", "dsp"] },
+  { k: "ad", l: "Adserver", syn: ["adserver"] }, { k: "fo", l: "Format", syn: ["format"] },
+  { k: "en", l: "Environnement", syn: ["environnement", "device"] }, { k: "he", l: "Hébergement", syn: ["hebergement"] },
+  { k: "cl", l: "Clics", t: "tri", syn: ["clic"] }, { k: "im", l: "Impressions", t: "tri", syn: ["impression"] },
+  { k: "pc", l: "Post Click", t: "tri", syn: ["post click", "postclick", "post-click"] },
+  { k: "pv", l: "Post View", t: "tri", syn: ["post view", "postview", "post-view"] },
+  { k: "maj", l: "Date MAJ", t: "date", syn: ["date"] },
+];
+const AV_COLS = [
+  { k: "pa", l: "Partenaire", syn: ["partenaire"] }, { k: "ad", l: "Adserver", syn: ["adserver"] },
+  { k: "en", l: "Environnement", syn: ["environnement", "device"] }, { k: "ou", l: "Outil", syn: ["outil", "tool"] },
+  { k: "fo", l: "Format", syn: ["format"] }, { k: "vi", l: "Viewability", t: "tri", syn: ["viewability", "visibilite"] },
+  { k: "bs", l: "Brand Safety", t: "tri", syn: ["brand"] }, { k: "it", l: "Invalid Traffic", t: "tri", syn: ["invalid", "ivt"] },
+  { k: "me", l: "Méthodologie", syn: ["methodologie", "methodo"] }, { k: "maj", l: "Date MAJ", t: "date", syn: ["date"] },
+];
+const REFS = {
+  adserver: {
+    key: "adserver", store: "ref_adserver", accent: "#D9422B", cols: ADS_COLS,
+    filters: ["pa", "pu", "ad", "fo", "en"], id: ["pa", "pu", "ad", "fo", "en"],
+    note: "N/A : l'information n'est pas connue. Rapprochez-vous de l'équipe projet adserver pour compléter la base.",
+  },
+  adverif: {
+    key: "adverif", store: "ref_adverif", accent: "#1E8E4E", cols: AV_COLS,
+    filters: ["pa", "ou", "en", "fo"], id: ["pa", "ad", "en", "ou", "fo"],
+    note: "La Custom Viewability n'est pas prise en compte. TBC : information inconnue, le CDP doit se rapprocher du partenaire.",
+  },
+};
+const TRI = ["", "Oui", "Non", "N/A", "TBC"];
+
+/* --- import --- */
+const noAcc = (v) => String(v == null ? "" : v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const MONTHS = { jan: 1, feb: 2, fev: 2, mar: 3, apr: 4, avr: 4, may: 5, mai: 5, jun: 6, juin: 6, jul: 7, juil: 7, aug: 8, aou: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function toISO(v) {
+  const x = String(v || "").trim();
+  if (!x || /^(null|n\/a|tbc)$/i.test(x)) return "";
+  if (/^\d{4}-\d{2}-\d{2}/.test(x)) return x.slice(0, 10);
+  let m = x.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/);
+  if (m) return m[3] + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0");
+  m = noAcc(x).match(/^(\d{1,2})\s+([a-z]{3,5})\.?\s+(\d{4})$/);
+  if (m && MONTHS[m[2].slice(0, 3)]) return m[3] + "-" + String(MONTHS[m[2].slice(0, 3)]).padStart(2, "0") + "-" + m[1].padStart(2, "0");
+  return "";
+}
+function splitLine(line, d) {
+  if (d !== ",") return line.split(d);
+  const out = []; let cur = "", q = false;
+  for (const ch of line) { if (ch === '"') q = !q; else if (ch === "," && !q) { out.push(cur); cur = ""; } else cur += ch; }
+  out.push(cur); return out;
+}
+function parseTable(text, cols) {
+  const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return { rows: [], mapped: [], missing: cols.map((c) => c.l) };
+  const d = ["\t", ";", ","].map((x) => [x, lines[0].split(x).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const head = splitLine(lines[0], d).map((h) => noAcc(h.replace(/"/g, "")));
+  const idx = {}, mapped = [], missing = [];
+  cols.forEach((c) => {
+    const i = head.findIndex((h) => h && (c.syn || []).some((sy) => h.indexOf(sy) >= 0));
+    if (i >= 0) { idx[c.k] = i; mapped.push(c.l); } else missing.push(c.l);
+  });
+  const clean = (v) => String(v == null ? "" : v).replace(/^"|"$/g, "").trim();
+  const tri = (v) => { const x = noAcc(v); return x === "oui" || x === "yes" ? "Oui" : x === "non" || x === "no" ? "Non" : x === "n/a" || x === "na" ? "N/A" : x === "tbc" ? "TBC" : ""; };
+  const rows = lines.slice(1).map((l, n) => {
+    const cells = splitLine(l, d), o = { uid: "i" + Date.now() + "_" + n };
+    cols.forEach((c) => {
+      const raw = clean(cells[idx[c.k]]);
+      o[c.k] = c.t === "tri" ? tri(raw) : c.t === "date" ? toISO(raw) : /^null$/i.test(raw) ? "" : raw;
+    });
+    return o;
+  }).filter((o) => cols.some((c) => o[c.k]));
+  return { rows, mapped, missing };
+}
+const rowKey = (r, cfg) => cfg.id.map((k) => noAcc(r[k])).join("|");
+function mergeRows(existing, incoming, cfg) {
+  const map = new Map(existing.map((r) => [rowKey(r, cfg), r]));
+  let upd = 0, add = 0, same = 0;
+  incoming.forEach((n) => {
+    const k = rowKey(n, cfg), old = map.get(k);
+    if (!old) { map.set(k, n); add++; return; }
+    if (cfg.cols.some((c) => (old[c.k] || "") !== (n[c.k] || ""))) { map.set(k, Object.assign({}, n, { uid: old.uid })); upd++; } else same++;
+  });
+  return { rows: Array.from(map.values()), upd, add, same };
+}
+const toCSV = (rows, cols) => [cols.map((c) => c.l).join(";")].concat(rows.map((r) => cols.map((c) => String(r[c.k] || "").replace(/;/g, ",")).join(";"))).join("\n");
+function download(name, content, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content], { type: type || "text/plain;charset=utf-8" }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ===================== État ===================== */
+const state = { tab: "suivi", campaigns: [], adserver: [], adverif: [], f: {}, q: "", client: "Tous", view: "flux", page: 0, draft: null, drawer: null, imp: null, saved: "", locked: false, boot: true, panel: null, backup: "", persist: "", snaps: [], lockErr: "" };
+const esc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
+const $ = (s) => document.querySelector(s);
+
+async function boot() {
+  Vault.meta = (await Vault.raw("meta")) || { enc: false };
+  await Backup.init();
+  if (DESKTOP) state.persist = "fichiers";
+  else try { state.persist = navigator.storage && navigator.storage.persisted ? ((await navigator.storage.persisted()) ? "garanti" : "non garanti") : "inconnu"; } catch (e) { state.persist = "inconnu"; }
+  if (!DESKTOP && state.persist === "non garanti" && navigator.storage && navigator.storage.persist) {
+    try { if (await navigator.storage.persist()) state.persist = "garanti"; } catch (e) {}
+  }
+  state.boot = false;
+  if (Vault.meta.enc) { state.locked = true; return render(); }
+  await loadAll();
+}
+async function loadAll() {
+  const [c, a, v, sn] = await Promise.all([Vault.get("campaigns"), Vault.get("ref_adserver"), Vault.get("ref_adverif"), Vault.get("snapshots")]);
+  state.campaigns = (c || []).map(norm);
+  state.adserver = a || SEED_ADSERVER.map((r, i) => rowObj(r, ADS_COLS, "a" + i));
+  state.adverif = v || SEED_ADVERIF.map((r, i) => rowObj(r, AV_COLS, "v" + i));
+  state.snaps = sn || [];
+  render();
+}
+function rowObj(arr, cols, uid) { const o = { uid }; cols.forEach((c, i) => (o[c.k] = arr[i] || "")); return o; }
+async function save(what) {
+  state.saved = "enregistrement…"; paintStatus();
+  await Vault.set(what === "suivi" ? "campaigns" : REFS[what].store, what === "suivi" ? state.campaigns : state[what]);
+  await pushSnapshot();
+  state.snaps = (await Vault.get("snapshots")) || [];
+  state.saved = "enregistré " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  paintStatus();
+  Backup.write(false);
+}
+function paintStatus() { const e = $("#status"); if (e) e.textContent = state.saved; }
+
+/* ===================== Rendu ===================== */
+const SECTIONS = [{ k: "suivi", l: "Suivi opérationnel", c: "#2743F0" }, { k: "adserver", l: "Adserver", c: "#D9422B" }, { k: "adverif", l: "Adverification", c: "#1E8E4E" }];
+
+function render() {
+  if (state.boot) return;
+  if (state.locked) {
+    $("#top").style.display = "none"; $("#wrap").innerHTML = lockScreen(); $("#drawer").innerHTML = "";
+    const pi = $("#passIn"); if (pi) pi.focus();
+    return;
+  }
+  $("#top").style.display = "";
+  if (!$("#head")) $("#wrap").innerHTML = '<div id="head"></div><div id="main"></div>';
+  const sec = SECTIONS.find((s) => s.k === state.tab);
+  $("#nav").innerHTML = SECTIONS.map((s) => `<button class="tab${state.tab === s.k ? " on" : ""}" data-tab="${s.k}" style="--ac:${s.c}">${s.l}</button>`).join("");
+  $("#head").innerHTML = `<h1>${sec.l}</h1><div class="rule" style="background:${sec.c}"></div>`;
+  $("#main").innerHTML = state.tab === "suivi" ? viewSuivi() : viewRef(REFS[state.tab]);
+  $("#drawer").innerHTML = state.drawer === "campaign" ? drawerCampaign() : state.drawer === "row" ? drawerRow() : state.imp ? modalImport() : state.panel === "sec" ? panelSecurite() : "";
+  $("#secState").textContent = (Vault.meta && Vault.meta.enc ? "protégé" : "sans code") + " · sauvegarde " + state.backup;
+  paintStatus();
+}
+
+/* ---------- Suivi ---------- */
+function enriched() { return state.campaigns.map(norm).map((c) => { const s = stepOf(c); const x = Object.assign({}, c, { s }); x.al = alertsFor(x); return x; }); }
+function bar(n, d) { return `<div class="bar"><i style="width:${d ? (n / d) * 100 : 0}%"></i></div>`; }
+
+function viewSuivi() {
+  const all = enriched();
+  const clients = ["Tous"].concat(Array.from(new Set(all.map((c) => c.c).filter(Boolean))).sort());
+  const rows = all.filter((c) => (state.client === "Tous" || c.c === state.client) && (!state.q || (lbl(c) + " " + (c.n || "")).toLowerCase().indexOf(state.q.toLowerCase()) >= 0));
+  const flux = rows.filter((c) => c.al.length).sort((a, b) => Math.max.apply(null, b.al.map((x) => x.lvl)) - Math.max.apply(null, a.al.map((x) => x.lvl)) || String(a.d2 || "9").localeCompare(String(b.d2 || "9")));
+  const bloq = flux.filter((c) => c.al.some((a) => a.lvl === 2)).length;
+  const kpi = [[bloq, "à débloquer", "var(--red)"], [flux.length - bloq, "à surveiller", "var(--amber)"], [rows.filter((c) => c.s === "En ligne").length, "en ligne", "var(--ink)"], [rows.filter((c) => ["Terminée", "Réconciliée"].indexOf(c.s) < 0).length, "ouvertes", "var(--ink)"]];
+
+  let body = "";
+  if (!state.campaigns.length) {
+    body = `<div class="card empty"><div class="big">Aucune campagne pour l'instant</div><p>Créez une campagne avec son client, son nom adserver et son ID agence. L'étape se déduira ensuite des encours cochés.</p><button class="prim" data-act="newc">Ajouter ma première campagne</button></div>`;
+  } else if (state.view === "flux") {
+    body = `<div class="card">` + (flux.length ? flux.map((c) => {
+      const top = Math.max.apply(null, c.al.map((a) => a.lvl));
+      return `<div class="row fx" data-open="${c.uid}" style="border-left-color:${top === 2 ? "var(--red)" : "var(--amber)"}">
+        <div class="grow"><div class="ttl">${esc(lbl(c))}</div>${c.n ? `<div class="sub">${esc(c.n)}</div>` : ""}
+        ${c.al.map((a) => `<div class="al"><b style="color:${a.lvl === 2 ? "var(--red)" : "var(--amber)"}">${esc(a.r)}</b> — ${esc(a.t)}</div>`).join("")}</div>
+        <div class="rt"><b>${esc(c.s)}</b><div>${fmtD(c.d1)} → ${fmtD(c.d2)}</div><div class="prog">${bar(doneN(c), gatesFor(c).length)}<span>${doneN(c)}/${gatesFor(c).length}</span></div></div></div>`;
+    }).join("") : `<div class="empty">Rien à débloquer. Les alertes apparaîtront dès qu'une date approche ou qu'un encours traîne.</div>`) + `</div>`;
+  } else if (state.view === "pipeline") {
+    body = `<div class="cols">` + PHASES.map((p) => {
+      const list = rows.filter((c) => STEP_PHASE[c.s] === p.key && c.s !== "Terminée");
+      return `<div class="card pad"><div class="ch"><b>${p.key}</b><span>${list.length}</span></div>` +
+        (list.length ? list.map((c) => {
+          const top = c.al.length ? Math.max.apply(null, c.al.map((a) => a.lvl)) : 0;
+          return `<div class="mini" data-open="${c.uid}" style="border-left-color:${top === 2 ? "var(--red)" : top ? "var(--amber)" : "var(--line)"}">
+            <div class="ttl s">${esc(lbl(c))}</div><div class="sub">${esc(c.s)} · ${fmtD(c.d1)} → ${fmtD(c.d2)}</div>${bar(doneN(c), gatesFor(c).length)}</div>`;
+        }).join("") : `<div class="sub">Aucune campagne</div>`) + `</div>`;
+    }).join("") + `</div>`;
+  } else {
+    body = `<div class="card"><div class="scroll"><table><thead><tr>${["Campagne", "Étape (calculée)", "Encours", "Départ", "Fin", "Alertes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
+      rows.map((c) => `<tr data-open="${c.uid}"><td class="b">${esc(lbl(c))}</td><td class="m">${esc(c.s)}</td><td><div class="prog">${bar(doneN(c), gatesFor(c).length)}<span>${doneN(c)}/${gatesFor(c).length}</span></div></td><td class="m n">${fmtD(c.d1)}</td><td class="m n">${fmtD(c.d2)}</td><td style="color:${c.al.length ? (c.al.some((a) => a.lvl === 2) ? "var(--red)" : "var(--amber)") : "var(--ink3)"};font-weight:${c.al.length ? 600 : 400}">${c.al.length || "—"}</td></tr>`).join("") +
+      `</tbody></table></div></div>`;
+  }
+
+  return `${state.campaigns.length ? `<div class="kpis">${kpi.map((k) => `<div class="card pad"><div class="num" style="color:${k[2]}">${k[0]}</div><div class="sub">${k[1]}</div></div>`).join("")}</div>` : ""}
+  <div class="tools">
+    ${clients.length > 1 ? `<select data-set="client">${clients.map((v) => `<option${v === state.client ? " selected" : ""}>${esc(v === "Tous" ? "Tous les clients" : v)}</option>`).join("")}</select>` : ""}
+    <input data-set="q" value="${esc(state.q)}" placeholder="Client, adserver, ID agence…">
+    <button class="prim" data-act="newc">Ajouter une campagne</button>
+    <div class="seg">${[["flux", "À traiter"], ["pipeline", "Pipeline"], ["liste", "Toutes"]].map((v) => `<button data-view="${v[0]}"${state.view === v[0] ? ' class="on"' : ""}>${v[1]}</button>`).join("")}</div>
+  </div>${body}
+  <div class="foot">${state.campaigns.length} campagne(s) · l'étape découle du dernier encours coché.</div>`;
+}
+
+/* ---------- Référentiel ---------- */
+function viewRef(cfg) {
+  const rows = state[cfg.key];
+  const shown = rows.filter((r) => cfg.filters.every((k) => !state.f[k] || r[k] === state.f[k]) &&
+    (!state.q || cfg.cols.some((c) => String(r[c.k] || "").toLowerCase().indexOf(state.q.toLowerCase()) >= 0)));
+  const PER = 40, start = state.page * PER, slice = shown.slice(start, start + PER);
+  const opts = (k) => Array.from(new Set(rows.map((r) => r[k]).filter(Boolean))).sort();
+  const pill = (v) => v ? `<span class="pill ${v === "Oui" ? "ok" : v === "Non" ? "no" : "na"}">${v}</span>` : `<span class="dash">—</span>`;
+
+  return `<div class="tools">
+    ${cfg.filters.map((k) => `<select data-filter="${k}"${state.f[k] ? ` style="border-color:${cfg.accent}"` : ""}><option value="">${cfg.cols.find((c) => c.k === k).l}</option>${opts(k).map((v) => `<option${state.f[k] === v ? " selected" : ""}>${esc(v)}</option>`).join("")}</select>`).join("")}
+    <input data-set="q" value="${esc(state.q)}" placeholder="Rechercher…">
+    <button data-act="import" style="margin-left:auto">Importer</button>
+    <button data-act="csv">Exporter CSV</button>
+    <button class="prim" data-act="newrow" style="background:${cfg.accent};border-color:${cfg.accent}">Ajouter une ligne</button>
+  </div>
+  <div class="note"><i>${esc(cfg.note)}</i> · Cliquez une ligne pour la modifier ou la supprimer.</div>
+  <div class="card"><div class="scroll"><table><thead><tr>${cfg.cols.map((c) => `<th>${c.l}</th>`).join("")}</tr></thead><tbody>` +
+    (slice.length ? slice.map((r) => `<tr data-row="${r.uid}">${cfg.cols.map((c, i) => `<td class="${i ? "m" : "b"}${c.t === "date" ? " n" : ""}">${c.t === "tri" ? pill(r[c.k]) : c.t === "date" ? fmtD(r[c.k]) : (esc(r[c.k]) || '<span class="dash">—</span>')}</td>`).join("")}</tr>`).join("")
+      : `<tr><td colspan="${cfg.cols.length}" class="empty">Aucune ligne pour ces filtres.</td></tr>`) +
+    `</tbody></table></div>
+    <div class="pager"><span>${shown.length ? start + 1 : 0} – ${Math.min(start + PER, shown.length)} / ${shown.length}</span>${shown.length !== rows.length ? `<span class="dash">(${rows.length} au total)</span>` : ""}
+    <span class="grow"></span><button data-page="-1"${state.page === 0 ? " disabled" : ""}>‹</button><button data-page="1"${start + PER >= shown.length ? " disabled" : ""}>›</button></div>
+  </div>`;
+}
+
+/* ---------- Panneau campagne ---------- */
+function drawerCampaign() {
+  const d = state.draft, s = stepOf(d), g = nextGate(d), lps = d.lps || [];
+  const isNew = !state.campaigns.some((x) => x.uid === d.uid);
+  const al = alertsFor(Object.assign({}, d, { s }));
+  const fld = (l, h) => `<dt>${l}</dt><dd>${h}</dd>`;
+  const inp = (f, ph, type) => `<input data-c="${f}" type="${type || "text"}" value="${esc(d[f] || "")}" placeholder="${ph || ""}">`;
+  return `<div class="ov" data-close="1"><aside>
+    <div class="dh"><span class="sub">${isNew ? "Nouvelle campagne" : "Fiche campagne"}</span><button data-close="1">Fermer</button></div>
+    <h2>${esc(lbl(d))}</h2><div class="sub sep">Libellé composé du client, du nom adserver et de l'ID agence</div>
+    <dl>${fld("Client", inp("c", "Nom du client"))}${fld("Nom adserver", inp("a", "20260901-CLIENT-FR-…"))}${fld("ID agence", inp("id"))}${fld("Ticket Issue", inp("t", "FR-T…"))}
+    ${fld("Départ", inp("d1", "", "date"))}${fld("Fin", inp("d2", "", "date"))}${fld("Régies", inp("rg"))}${fld("Libellé interne", inp("n", "optionnel"))}
+    ${fld("Particularité", `<textarea data-c="p" rows="2">${esc(d.p || "")}</textarea>`)}</dl>
+
+    <div class="box">
+      <label class="chk"><input type="checkbox" data-tog="tagOn"${d.tagOn ? " checked" : ""}><b>Taggage activé sur la campagne</b></label>
+      ${!d.tagOn ? `<div class="sub ind">Les encours « Plan de taggage envoyé » et « Traceurs / TP filter posés » sont retirés du parcours.</div>` : `
+      <dl class="mt">${fld("Type de tags", inp("tagType", "Floodlight, TP filter, pixel régie…"))}</dl>
+      <div class="ch mt"><b class="s">Landing pages</b><button data-act="addlp">Ajouter</button></div>
+      ${lps.length ? lps.map((l, i) => `<div class="lp"><div class="fx"><input data-lp="${i}" value="${esc(l.url)}" placeholder="https://…"><button data-dellp="${i}">×</button></div>
+        ${d.utmOn && l.url ? `<textarea readonly class="prev">${esc(taggedUrl(l.url, d.utm))}</textarea>` : ""}</div>`).join("") : `<div class="sub">Aucune landing page renseignée.</div>`}
+      <label class="chk mt"><input type="checkbox" data-tog="utmOn"${d.utmOn ? " checked" : ""}><b class="s">UTM activés</b></label>
+      ${d.utmOn ? `<dl class="mt">${UTM_KEYS.map(([f, p]) => fld(p, `<input data-u="${f}" value="${esc(d.utm[f])}" placeholder="${f === "source" ? "regie" : f === "medium" ? "display" : f === "campaign" ? "nom-campagne" : "optionnel"}">`)).join("")}</dl>` : ""}`}
+    </div>
+
+    <div class="box soft"><div class="sub">Étape calculée</div><div class="step">${esc(s)}</div>
+      <div class="sub">${g ? `Passera en « ${esc(g.step)} » quand « ${esc(g.l)} » sera coché` : "Tous les encours sont validés"}</div></div>
+    ${al.map((a) => `<div class="alert" style="border-color:${a.lvl === 2 ? "var(--red)" : "var(--amber)"}"><b style="color:${a.lvl === 2 ? "var(--red)" : "var(--amber)"}">${esc(a.r)}</b><div class="sub">${esc(a.t)}</div></div>`).join("")}
+
+    <div class="ch mt"><b>Encours à gérer</b><span class="sub n">${doneN(d)}/${gatesFor(d).length}</span></div>
+    ${gatesFor(d).map((gt) => {
+      const t = d.tasks[gt.k] || { ok: false, at: null, note: "" }, nx = g && g.k === gt.k;
+      return `<div class="gate${t.ok ? " done" : nx ? " next" : ""}">
+        <label class="chk"><input type="checkbox" data-gate="${gt.k}"${t.ok ? " checked" : ""}><span class="gl">${esc(gt.l)}</span><span class="sub n">${t.ok ? fmtD(t.at) : esc(gt.step)}</span></label>
+        <textarea data-note="${gt.k}" rows="${t.note ? 2 : 1}" placeholder="Commentaire sur cet encours…">${esc(t.note || "")}</textarea></div>`;
+    }).join("")}
+
+    <div class="acts"><button class="prim" data-act="savec">Enregistrer</button><button data-close="1">Annuler</button>
+    ${isNew ? "" : `<button class="del" data-act="delc">Supprimer</button>`}</div>
+  </aside></div>`;
+}
+
+/* ---------- Panneau ligne référentiel ---------- */
+function drawerRow() {
+  const cfg = REFS[state.tab], d = state.draft, isNew = !state[cfg.key].some((r) => r.uid === d.uid);
+  return `<div class="ov" data-close="1"><aside class="sm">
+    <div class="dh"><b>${isNew ? "Nouvelle ligne" : "Modifier la ligne"}</b><button data-close="1">Fermer</button></div>
+    <dl class="mt">${cfg.cols.filter((c) => c.t !== "date").map((c) => `<dt>${c.l}</dt><dd>${c.t === "tri"
+      ? `<select data-r="${c.k}">${TRI.map((v) => `<option value="${v}"${(d[c.k] || "") === v ? " selected" : ""}>${v || "—"}</option>`).join("")}</select>`
+      : `<input data-r="${c.k}" value="${esc(d[c.k] || "")}">`}</dd>`).join("")}</dl>
+    <div class="sub mt">La date de mise à jour est posée automatiquement à l'enregistrement.</div>
+    <div class="acts"><button class="prim" style="background:${cfg.accent};border-color:${cfg.accent}" data-act="saver">Enregistrer</button><button data-close="1">Annuler</button>
+    ${isNew ? "" : `<button class="del" data-act="delr">Supprimer</button>`}</div>
+  </aside></div>`;
+}
+
+/* ---------- Import ---------- */
+function modalImport() {
+  const cfg = REFS[state.tab], res = parseTable(state.imp.text, cfg.cols);
+  let diff = "";
+  if (state.imp.mode === "merge" && res.rows.length) {
+    const m = mergeRows(state[cfg.key], res.rows, cfg);
+    diff = `<div class="mt"><b style="color:var(--blue)">${m.upd}</b> ligne(s) modifiée(s) · <b style="color:var(--green)">${m.add}</b> ajoutée(s) · ${m.same} inchangée(s)
+      <div class="sub">Rapprochement sur : ${cfg.id.map((k) => cfg.cols.find((c) => c.k === k).l).join(" + ")}</div></div>`;
+  }
+  return `<div class="ov mid" data-close="1"><section>
+    <div class="dh"><b>Importer le référentiel</b><button data-close="1">Fermer</button></div>
+    <p class="sub">Collez l'export (Sheets, Looker ou CSV), en-têtes compris. Séparateur détecté automatiquement, colonnes reconnues par leur intitulé.
+    <b>Mettre à jour</b> ne touche que ce qui a changé et conserve les lignes absentes de l'export. <b>Remplacer tout</b> repart de zéro. <b>Tout ajouter</b> empile sans contrôle.</p>
+    <textarea id="impText" rows="9" class="mono" placeholder="${cfg.cols.map((c) => c.l).join("\t")}">${esc(state.imp.text)}</textarea>
+    ${state.imp.text.trim() ? `<div class="sub mt"><b style="color:${res.rows.length ? "var(--green)" : "var(--red)"}">${res.rows.length}</b> ligne(s) détectée(s)<div>Colonnes reconnues : ${res.mapped.join(", ") || "aucune"}</div>${res.missing.length ? `<div style="color:var(--amber)">Non trouvées : ${res.missing.join(", ")}</div>` : ""}${diff}</div>` : ""}
+    <div class="acts">${[["merge", "Mettre à jour"], ["replace", "Remplacer tout"], ["append", "Tout ajouter"]].map((m) => `<button data-mode="${m[0]}"${state.imp.mode === m[0] ? ' class="on"' : ""}>${m[1]}</button>`).join("")}
+    <button class="prim" data-act="doimport" style="margin-left:auto;background:${cfg.accent};border-color:${cfg.accent}"${res.rows.length ? "" : " disabled"}>${state.imp.mode === "merge" ? "Mettre à jour" : "Importer"} ${res.rows.length || ""}</button></div>
+  </section></div>`;
+}
+
+function lockScreen() {
+  return `<div class="lock"><div class="card lockbox">
+    <div class="lk">&#128274;</div><h2>Suivi opérationnel</h2>
+    <p class="sub">Données chiffrées sur ce poste. Saisissez votre code d'accès.</p>
+    <input id="passIn" type="password" placeholder="Code d'accès" autofocus>
+    ${state.lockErr ? `<div class="err">${esc(state.lockErr)}</div>` : ""}
+    <button class="prim" data-act="unlock">Déverrouiller</button>
+  </div></div>`;
+}
+function panelSecurite() {
+  const on = Vault.meta && Vault.meta.enc;
+  return `<div class="ov mid" data-close="1"><section>
+    <div class="dh"><b>Sécurité et sauvegarde</b><button data-close="1">Fermer</button></div>
+
+    <div class="secrow"><div><b>Stockage des données</b><div class="sub">${DESKTOP
+      ? "Fichiers JSON écrits de façon atomique, avec copie .bak du fichier précédent.<br>" + esc(state.dataPath || "") + ' <button data-act="reveal">Ouvrir le dossier</button>'
+      : "Base locale IndexedDB, doublée dans le stockage local. Aucune donnée ne sort du poste."}</div></div>
+      <span class="pill ${DESKTOP || state.persist === "garanti" ? "ok" : "na"}">${DESKTOP ? "fichiers" : esc(state.persist)}</span></div>
+
+    <div class="secrow"><div><b>Code d'accès</b><div class="sub">${on ? "Données chiffrées en AES-256 sur le disque. Verrouillage automatique après 15 minutes d'inactivité." : "Sans code, les données sont lisibles par quiconque ouvre ce profil de navigateur."}</div></div>
+      ${on ? `<button data-act="delpass">Retirer</button>` : `<button class="prim" data-act="setpass">Définir</button>`}</div>
+
+    <div class="secrow"><div><b>Sauvegarde automatique</b><div class="sub">Choisissez un dossier (OneDrive, disque réseau). Un JSON y est réécrit à chaque enregistrement, plus une copie datée par jour.${DESKTOP && Backup.dirLabel ? "<br>" + esc(Backup.dirLabel) : ""}</div></div>
+      <div class="fx"><span class="pill ${state.backup === "actif" ? "ok" : state.backup === "non configuré" || state.backup === "non disponible" ? "na" : "no"}">${esc(state.backup)}</span>
+      ${state.backup === "à réautoriser" ? `<button data-act="grantdir">Réautoriser</button>` : `<button data-act="chooseDir">${state.backup === "actif" ? "Changer" : "Choisir"}</button>`}</div></div>
+
+    <div class="secrow col"><div class="fx sb"><b>Versions précédentes</b><span class="sub">${state.snaps.length} version(s) conservée(s)</span></div>
+      <div class="snaps">${state.snaps.length ? state.snaps.map((sn, i) => `<div class="snap"><span>${new Date(sn.t).toLocaleString("fr-FR")}</span><span class="sub">${sn.campaigns.length} campagnes · ${sn.adserver.length + sn.adverif.length} lignes</span><button data-snap="${i}">Restaurer</button></div>`).join("") : `<div class="sub">Aucune version encore.</div>`}</div></div>
+
+    <div class="acts"><button data-act="backup">Exporter un fichier de sauvegarde</button><button data-act="restore">Restaurer un fichier</button></div>
+  </section></div>`;
+}
+
+/* ===================== Événements ===================== */
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-tab],[data-view],[data-open],[data-row],[data-act],[data-page],[data-close],[data-mode],[data-dellp]");
+  if (!t) return;
+  const d = state.draft;
+
+  if (e.target.classList.contains("ov") || (t.dataset.close !== undefined && t.tagName === "BUTTON")) {
+    state.drawer = null; state.draft = null; state.imp = null; state.panel = null; return render();
+  }
+  if (t.dataset.tab) { state.tab = t.dataset.tab; state.f = {}; state.q = ""; state.page = 0; return render(); }
+  if (t.dataset.view) { state.view = t.dataset.view; return render(); }
+  if (t.dataset.page) { state.page = Math.max(0, state.page + (+t.dataset.page)); return render(); }
+  if (t.dataset.open) { state.draft = norm(JSON.parse(JSON.stringify(state.campaigns.find((c) => c.uid === t.dataset.open)))); state.drawer = "campaign"; return render(); }
+  if (t.dataset.row) { state.draft = Object.assign({}, state[state.tab].find((r) => r.uid === t.dataset.row)); state.drawer = "row"; return render(); }
+  if (t.dataset.mode) { state.imp.mode = t.dataset.mode; return render(); }
+  if (t.dataset.snap !== undefined) {
+    const sn = state.snaps[+t.dataset.snap];
+    if (!confirm("Revenir à la version du " + new Date(sn.t).toLocaleString("fr-FR") + " ? L'état actuel est d'abord conservé comme version.")) return;
+    await pushSnapshot();
+    state.campaigns = sn.campaigns.map(norm); state.adserver = sn.adserver; state.adverif = sn.adverif;
+    await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif)]);
+    state.snaps = (await Vault.get("snapshots")) || []; state.panel = null; render(); return Backup.write(true);
+  }
+  if (t.dataset.dellp !== undefined) { d.lps.splice(+t.dataset.dellp, 1); return render(); }
+
+  const cfg = REFS[state.tab];
+  switch (t.dataset.act) {
+    case "newc": state.draft = norm({ uid: "c" + Date.now(), c: state.client !== "Tous" ? state.client : "", a: "", id: "", d1: "", d2: "", t: "" }); state.drawer = "campaign"; return render();
+    case "addlp": d.lps.push({ url: "" }); return render();
+    case "savec": {
+      const c = Object.assign({}, d); delete c.al; delete c.s;
+      state.campaigns = state.campaigns.some((x) => x.uid === c.uid) ? state.campaigns.map((x) => (x.uid === c.uid ? c : x)) : [c].concat(state.campaigns);
+      state.drawer = null; state.draft = null; render(); return save("suivi");
+    }
+    case "delc": if (!confirm("Supprimer définitivement cette campagne ?")) return; state.campaigns = state.campaigns.filter((x) => x.uid !== d.uid); state.drawer = null; state.draft = null; render(); return save("suivi");
+    case "newrow": state.draft = { uid: "r" + Date.now() }; state.drawer = "row"; return render();
+    case "saver": {
+      const r = Object.assign({}, d, { maj: todayISO() });
+      state[cfg.key] = state[cfg.key].some((x) => x.uid === r.uid) ? state[cfg.key].map((x) => (x.uid === r.uid ? r : x)) : [r].concat(state[cfg.key]);
+      state.drawer = null; state.draft = null; render(); return save(state.tab);
+    }
+    case "delr": if (!confirm("Supprimer cette ligne du référentiel ?")) return; state[cfg.key] = state[cfg.key].filter((x) => x.uid !== d.uid); state.drawer = null; state.draft = null; render(); return save(state.tab);
+    case "import": state.imp = { text: "", mode: "merge" }; return render();
+    case "doimport": {
+      const res = parseTable(state.imp.text, cfg.cols);
+      if (state.imp.mode === "replace" && !confirm("Remplacer les " + state[cfg.key].length + " lignes actuelles par les " + res.rows.length + " lignes importées ? Une version restaurable est conservée.")) return;
+      state[cfg.key] = state.imp.mode === "replace" ? res.rows : state.imp.mode === "append" ? res.rows.concat(state[cfg.key]) : mergeRows(state[cfg.key], res.rows, cfg).rows;
+      state.imp = null; state.page = 0; render(); return save(state.tab);
+    }
+    case "secpanel": state.panel = "sec"; return render();
+    case "unlock": {
+      if (!(await unlock($("#passIn").value))) { state.lockErr = "Code incorrect."; return render(); }
+      state.lockErr = ""; return;
+    }
+    case "setpass": {
+      const p1 = prompt("Nouveau code d'accès (aucune récupération possible en cas d'oubli) :");
+      if (!p1) return;
+      if (p1.length < 4) return alert("Code trop court, 4 caractères minimum.");
+      if (prompt("Confirmez le code :") !== p1) return alert("Les deux saisies diffèrent.");
+      await setPasscode(p1); armIdle();
+      alert("Code enregistré, données chiffrées sur ce poste.\nGardez une sauvegarde à jour : sans le code, elles sont irrécupérables.");
+      return render();
+    }
+    case "delpass":
+      if (!confirm("Retirer le code ? Les données redeviendront lisibles sans mot de passe sur ce poste.")) return;
+      await removePasscode(); return render();
+    case "chooseDir": return Backup.choose();
+    case "grantdir": return Backup.grant();
+    case "csv": return download(cfg.key + "_" + todayISO() + ".csv", "\uFEFF" + toCSV(state[cfg.key], cfg.cols), "text/csv;charset=utf-8");
+    case "backup": {
+      const payload = JSON.stringify(exportObj(), null, 1), name = "adops_sauvegarde_" + todayISO() + ".json";
+      if (DESKTOP) { await window.desktop.exportFile(name, payload); return; }
+      return download(name, payload, "application/json");
+    }
+    case "restore": {
+      if (!DESKTOP) return $("#restoreFile").click();
+      const txt = await window.desktop.importFile();
+      if (txt) await applyBackup(txt);
+      return;
+    }
+    case "reveal": return window.desktop.reveal();
+  }
+});
+
+document.addEventListener("input", (e) => {
+  const el = e.target, d = state.draft;
+  if (el.dataset.set) { state[el.dataset.set === "client" ? "client" : "q"] = el.value.replace(/^Tous les clients$/, "Tous"); state.page = 0; return softRender(); }
+  if (el.id === "impText") { state.imp.text = el.value; return render(); }
+  if (!d) return;
+  if (el.dataset.c) { d[el.dataset.c] = el.value; return refreshStep(); }
+  if (el.dataset.r) { d[el.dataset.r] = el.value; return; }
+  if (el.dataset.u) { d.utm[el.dataset.u] = el.value; return refreshPrev(); }
+  if (el.dataset.lp) { d.lps[+el.dataset.lp].url = el.value; return refreshPrev(); }
+  if (el.dataset.note) { d.tasks[el.dataset.note] = Object.assign({ ok: false, at: null }, d.tasks[el.dataset.note], { note: el.value }); return; }
+});
+document.addEventListener("change", (e) => {
+  const el = e.target, d = state.draft;
+  if (el.dataset.filter !== undefined) { state.f[el.dataset.filter] = el.value; state.page = 0; return render(); }
+  if (el.dataset.set === "client") { state.client = el.value === "Tous les clients" ? "Tous" : el.value; return render(); }
+  if (!d) return;
+  if (el.dataset.tog) { d[el.dataset.tog] = el.checked; return render(); }
+  if (el.dataset.gate) {
+    const k = el.dataset.gate, t = d.tasks[k];
+    d.tasks[k] = t && t.ok ? Object.assign({}, t, { ok: false, at: null }) : { ok: true, at: todayISO(), note: (t && t.note) || "" };
+    return render();
+  }
+  if (el.dataset.r) d[el.dataset.r] = el.value;
+});
+function softRender() {
+  const s = document.activeElement && document.activeElement.dataset.set;
+  render();
+  if (!s) return;
+  const el = document.querySelector('[data-set="' + s + '"]');
+  if (el) { el.focus(); if (el.setSelectionRange) try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} }
+}
+function refreshStep() {
+  const d = state.draft, box = $("#drawer .step"); if (!box) return;
+  const h2 = $("#drawer h2"); if (h2) h2.textContent = lbl(d);
+}
+function refreshPrev() {
+  const d = state.draft;
+  document.querySelectorAll("#drawer .prev").forEach((el, i) => (el.value = taggedUrl((d.lps[i] || {}).url, d.utm)));
+}
+
+async function applyBackup(txt) {
+  try {
+    const j = JSON.parse(txt);
+    await pushSnapshot();
+    if (j.campaigns) { state.campaigns = j.campaigns.map(norm); await Vault.set("campaigns", state.campaigns); }
+    if (j.adserver) { state.adserver = j.adserver; await Vault.set("ref_adserver", state.adserver); }
+    if (j.adverif) { state.adverif = j.adverif; await Vault.set("ref_adverif", state.adverif); }
+    state.snaps = (await Vault.get("snapshots")) || [];
+    state.saved = "sauvegarde restaurée"; state.panel = null; render();
+  } catch (err) { alert("Fichier de sauvegarde illisible."); }
+}
+if (document.getElementById("restoreFile")) {
+  $("#restoreFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    await applyBackup(await f.text());
+    e.target.value = "";
+  });
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && state.locked && document.activeElement && document.activeElement.id === "passIn") document.querySelector('[data-act="unlock"]').click(); });
+boot();
+
+</script>
+</body>
+</html>
