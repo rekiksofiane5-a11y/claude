@@ -22,8 +22,9 @@ Chaque compilation (GitHub Actions, sur un runner `windows-latest`) produit :
 |---|---|
 | `Suivi-ad-ops-<version>.msi` | **Déploiement par la DSI** (Intune, SCCM/MECM, GPO). Installation pour toutes les sessions, dans `C:\Program Files`. |
 | `Suivi-ad-ops-Setup-<version>.exe` | Installation par l'utilisateur, sans droits administrateur, dans `%LOCALAPPDATA%\Programs`. |
+| Dossier `Suivi ad ops\` (artefact « prêt à l'emploi ») | Application décompressée, lancée directement par `Suivi ad ops.exe`, sans installation. Mêmes fichiers que ceux que posent les installeurs. |
 | `Suivi-ad-ops-navigateur.html` | Version de secours qui s'ouvre dans le navigateur déjà autorisé, sans rien installer |
-| `SHA256SUMS.txt` | Empreintes SHA-256 des fichiers ci-dessus, pour vérifier leur intégrité |
+| `SHA256SUMS.txt` | Empreintes SHA-256 des fichiers ci-dessus (y compris `Suivi ad ops.exe`), pour vérifier leur intégrité |
 
 Le code source et la chaîne de compilation se trouvent dans le dépôt, dossier `ad-ops-desktop/`.
 
@@ -68,7 +69,7 @@ Les outils de développement de Chromium sont désactivés dans la version insta
 
 Deux choses sont à savoir :
 
-- Les règles AppLocker par défaut n'autorisent les exécutables que dans `Program Files` et `Windows`. L'installeur utilisateur (`.exe`) place l'application dans `%LOCALAPPDATA%`, donc **il sera bloqué sur un poste verrouillé**. C'est le MSI, déployé par la DSI dans `Program Files`, qui convient.
+- Les règles AppLocker par défaut n'autorisent les exécutables que dans `Program Files` et `Windows`. L'installeur utilisateur (`.exe`) place l'application dans `%LOCALAPPDATA%`, donc **il sera bloqué sur un poste verrouillé**, tout comme la version sans installation décompressée dans le profil de l'utilisateur. C'est le MSI, déployé par la DSI dans `Program Files`, qui convient.
 - Un exécutable non signé peut être refusé par WDAC, Smart App Control ou SmartScreen. La DSI peut autoriser l'application par son empreinte SHA-256 (`SHA256SUMS.txt`) ou la faire signer.
 
 ### Signature

@@ -1,0 +1,22 @@
+Suivi ad ops - version sans installation
+=======================================
+
+Pour lancer l'application : double-cliquez sur « Suivi ad ops.exe ».
+Rien ne s'installe, aucun droit administrateur n'est demandé.
+
+Gardez tout le dossier ensemble : l'application a besoin de tous les
+fichiers qui sont à côté de « Suivi ad ops.exe ».
+
+Astuce : clic droit sur « Suivi ad ops.exe » > Afficher d'autres options
+> Envoyer vers > Bureau (créer un raccourci), puis épinglez le raccourci
+à la barre des tâches.
+
+Vos données ne sont PAS dans ce dossier. Elles sont enregistrées
+automatiquement dans %APPDATA%\Suivi ad ops\data. Vous pouvez donc
+remplacer ce dossier par une version plus récente sans rien perdre.
+
+Au premier lancement, Windows peut afficher « Windows a protégé votre
+ordinateur » : l'application n'est pas signée. Cliquez sur « Informations
+complémentaires » puis « Exécuter quand même ». Si l'ordinateur refuse de
+la lancer, c'est une règle de votre entreprise : demandez à votre DSI
+(voir DSI.md).

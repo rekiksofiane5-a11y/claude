@@ -3,6 +3,14 @@
 Un vrai logiciel de bureau, qui s'installe et s'ouvre comme Teams. Il n'a besoin ni de navigateur, ni de serveur, ni de réseau.
 Il fait la même chose que la version HTML : le suivi opérationnel et les référentiels Adserver (391 lignes) et Adverification (535 lignes).
 
+## Sans installation (le plus simple)
+
+1. Téléchargez **Suivi-ad-ops-pret-a-l-emploi** et décompressez-le où vous voulez : Documents, bureau…
+2. Double-cliquez sur **`Suivi ad ops.exe`**. C'est tout : rien ne s'installe, et aucun droit administrateur n'est demandé.
+3. Pour l'avoir sous la main, créez un raccourci sur le bureau, puis épinglez-le à la barre des tâches.
+
+Gardez le dossier entier : l'application a besoin de tous les fichiers qui sont à côté du `.exe`. Vos données ne sont pas dans ce dossier (voir [Où sont les données](#où-sont-les-données)). Vous pouvez donc le remplacer par une version plus récente sans rien perdre. La version sans installation et la version installée partagent les mêmes données.
+
 ## Installer
 
 1. Lancez `Suivi-ad-ops-Setup-1.2.0.exe`. L'installation se fait sans question, **sans droits administrateur**, dans votre profil Windows, comme Teams.
@@ -23,7 +31,9 @@ Sur un PC d'entreprise, l'installation peut être bloquée : AppLocker, WDAC, Sm
 - **`SHA256SUMS.txt`** : les empreintes qui permettent à la DSI d'autoriser exactement ces fichiers.
 - **`Suivi-ad-ops-navigateur.html`** : une solution d'attente si rien ne peut être installé. Elle s'ouvre dans le navigateur déjà autorisé. Dans ce mode, pensez à activer la sauvegarde automatique dans un dossier (panneau **Sécurité**), car le navigateur peut effacer ses données locales.
 
-Tous ces fichiers sont dans l'artefact **Suivi-ad-ops-Windows** de GitHub Actions.
+Tous ces fichiers sont dans l'artefact **Suivi-ad-ops-installeurs-et-DSI** de GitHub Actions. La version sans installation est dans l'artefact **Suivi-ad-ops-pret-a-l-emploi**.
+
+La version sans installation n'échappe pas aux règles du poste. Si l'ordinateur refuse de lancer `Suivi ad ops.exe`, c'est une règle de votre entreprise : passez par la DSI.
 
 ## Tout s'enregistre tout seul
 
@@ -69,4 +79,4 @@ npm run build:win-portable   # → dist/Suivi-ad-ops-portable.exe (un seul fichi
 
 Pour compiler, il faut Node.js 18 ou plus récent. Seule la machine qui compile en a besoin : le poste qui utilise l'application n'en a pas besoin.
 
-Sans Node.js, vous pouvez utiliser GitHub Actions : à chaque modification de ce dossier, le workflow **ad-ops-desktop** teste l'application, construit l'installeur sous Windows et le dépose dans l'onglet **Actions** du dépôt, sous l'artefact **Suivi-ad-ops-Windows**.
+Sans Node.js, vous pouvez utiliser GitHub Actions : à chaque modification de ce dossier, le workflow **ad-ops-desktop** teste l'application, construit l'application sous Windows et la dépose dans l'onglet **Actions** du dépôt : **Suivi-ad-ops-pret-a-l-emploi** (sans installation) et **Suivi-ad-ops-installeurs-et-DSI**.
