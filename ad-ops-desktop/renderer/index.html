@@ -132,6 +132,8 @@ dt{color:var(--ink3);padding-top:7px}dd{margin:0}
 .err{color:var(--red);font-size:12.5px;margin-bottom:10px}
 .secrow{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line)}
 .secrow.col{display:block}
+.passf{display:grid;gap:8px;margin-top:10px;max-width:360px}
+.passf .err{color:var(--red);font-size:12.5px}
 .secrow b{font-size:13.5px}
 .secrow .sub{margin-top:3px;max-width:430px}
 .secrow > div:first-child{flex:1}
@@ -1146,12 +1148,15 @@ const Vault = {
     return v;
   },
   /* double écriture : la donnée survit à la perte d'un des deux magasins */
-  async set(k, v) {
-    const payload = this.key ? await encryptVal(this.key, v) : v;
+  async setRaw(k, payload) {
     if (DESKTOP) return window.desktop.set(k, payload);
     const ok = await IDB.set(k, payload);
     try { localStorage.setItem("adops_" + k, JSON.stringify(payload)); } catch (e) { /* quota */ }
     return ok;
+  },
+  async set(k, v) {
+    if (!this.key && this.meta && this.meta.enc) throw new Error("locked"); /* jamais d'écriture en clair une fois protégé */
+    return this.setRaw(k, this.key ? await encryptVal(this.key, v) : v);
   },
 };
 
@@ -1210,7 +1215,7 @@ let idleTimer = null;
 function armIdle() {
   if (!Vault.meta || !Vault.meta.enc) return;
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => { Vault.key = null; state.locked = true; state.drawer = null; state.imp = null; render(); }, 15 * 60 * 1000);
+  idleTimer = setTimeout(async () => { await commitDraft(); Vault.key = null; state.locked = true; state.drawer = null; state.draft = null; state.imp = null; render(); }, 15 * 60 * 1000);
 }
 ["click", "keydown"].forEach((ev) => document.addEventListener(ev, armIdle, true));
 
@@ -1219,15 +1224,13 @@ async function setPasscode(pass) {
   const key = await deriveKey(pass, salt);
   Vault.key = key;
   Vault.meta = { enc: true, salt, check: await encryptVal(key, "ok") };
-  await IDB.set("meta", Vault.meta);
-  localStorage.setItem("adops_meta", JSON.stringify(Vault.meta));
-  await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif), Vault.set("snapshots", [])]);
+  await Vault.setRaw("meta", Vault.meta);
+  await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif), Vault.set("snapshots", []), Vault.set("draft", null)]);
 }
 async function removePasscode() {
   Vault.key = null; Vault.meta = { enc: false };
-  await IDB.set("meta", Vault.meta);
-  localStorage.setItem("adops_meta", JSON.stringify(Vault.meta));
-  await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif), Vault.set("snapshots", [])]);
+  await Vault.setRaw("meta", Vault.meta);
+  await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif), Vault.set("snapshots", []), Vault.set("draft", null)]);
 }
 async function unlock(pass) {
   try {
@@ -1389,7 +1392,7 @@ function download(name, content, type) {
 }
 
 /* ===================== État ===================== */
-const state = { tab: "suivi", campaigns: [], adserver: [], adverif: [], f: {}, q: "", client: "Tous", view: "flux", page: 0, draft: null, drawer: null, imp: null, saved: "", locked: false, boot: true, panel: null, backup: "", persist: "", snaps: [], lockErr: "" };
+const state = { tab: "suivi", campaigns: [], adserver: [], adverif: [], f: {}, q: "", client: "Tous", view: "flux", page: 0, draft: null, drawer: null, imp: null, saved: "", locked: false, boot: true, panel: null, backup: "", persist: "", snaps: [], lockErr: "", dirty: false };
 const esc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
 const $ = (s) => document.querySelector(s);
 
@@ -1411,6 +1414,11 @@ async function loadAll() {
   state.adserver = a || SEED_ADSERVER.map((r, i) => rowObj(r, ADS_COLS, "a" + i));
   state.adverif = v || SEED_ADVERIF.map((r, i) => rowObj(r, AV_COLS, "v" + i));
   state.snaps = sn || [];
+  const dr = await Vault.get("draft");
+  if (dr && dr.draft && (dr.drawer === "campaign" || (dr.drawer === "row" && REFS[dr.tab]))) {
+    state.tab = dr.tab; state.drawer = dr.drawer; state.draft = dr.drawer === "campaign" ? norm(dr.draft) : dr.draft;
+    state.dirty = true; state.saved = "fiche non enregistrée récupérée";
+  }
   render();
 }
 function rowObj(arr, cols, uid) { const o = { uid }; cols.forEach((c, i) => (o[c.k] = arr[i] || "")); return o; }
@@ -1421,7 +1429,46 @@ async function save(what) {
   state.snaps = (await Vault.get("snapshots")) || [];
   state.saved = "enregistré " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   paintStatus();
-  Backup.write(false);
+  return Backup.write(false);
+}
+
+/* --- fiche ouverte : enregistrée en continu comme brouillon, validée à la fermeture ---
+   Une coupure ou un plantage ne perd rien : la fiche est rouverte au prochain lancement. */
+let draftTimer = null;
+function touchDraft() {
+  state.dirty = true;
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(persistDraft, 400);
+}
+function persistDraft() {
+  clearTimeout(draftTimer); draftTimer = null;
+  if (!state.dirty || !state.draft || (state.drawer !== "campaign" && state.drawer !== "row")) return;
+  if (!Vault.key && Vault.meta && Vault.meta.enc) return;
+  return Vault.set("draft", { drawer: state.drawer, tab: state.tab, draft: state.draft }).catch(() => {});
+}
+function dropDraft() {
+  clearTimeout(draftTimer); draftTimer = null; state.dirty = false;
+  if (!Vault.key && Vault.meta && Vault.meta.enc) return;
+  return Vault.set("draft", null).catch(() => {});
+}
+function commitCampaign(d) {
+  const c = Object.assign({}, d); delete c.al; delete c.s;
+  state.campaigns = state.campaigns.some((x) => x.uid === c.uid) ? state.campaigns.map((x) => (x.uid === c.uid ? c : x)) : [c].concat(state.campaigns);
+  state.drawer = null; state.draft = null; render();
+  return Promise.all([save("suivi"), dropDraft()]);
+}
+function commitRow(d) {
+  const cfg = REFS[state.tab], r = Object.assign({}, d, { maj: todayISO() });
+  state[cfg.key] = state[cfg.key].some((x) => x.uid === r.uid) ? state[cfg.key].map((x) => (x.uid === r.uid ? r : x)) : [r].concat(state[cfg.key]);
+  state.drawer = null; state.draft = null; render();
+  return Promise.all([save(state.tab), dropDraft()]);
+}
+/* enregistre la fiche ouverte si elle a été modifiée */
+function commitDraft() {
+  if (!state.draft || !state.dirty) return Promise.resolve();
+  if (state.drawer === "campaign") return commitCampaign(state.draft);
+  if (state.drawer === "row") return commitRow(state.draft);
+  return Promise.resolve();
 }
 function paintStatus() { const e = $("#status"); if (e) e.textContent = state.saved; }
 
@@ -1558,7 +1605,7 @@ function drawerCampaign() {
         <textarea data-note="${gt.k}" rows="${t.note ? 2 : 1}" placeholder="Commentaire sur cet encours…">${esc(t.note || "")}</textarea></div>`;
     }).join("")}
 
-    <div class="acts"><button class="prim" data-act="savec">Enregistrer</button><button data-close="1">Annuler</button>
+    <div class="acts"><button class="prim" data-act="savec">Enregistrer</button><button data-close="cancel">Annuler</button>
     ${isNew ? "" : `<button class="del" data-act="delc">Supprimer</button>`}</div>
   </aside></div>`;
 }
@@ -1572,7 +1619,7 @@ function drawerRow() {
       ? `<select data-r="${c.k}">${TRI.map((v) => `<option value="${v}"${(d[c.k] || "") === v ? " selected" : ""}>${v || "—"}</option>`).join("")}</select>`
       : `<input data-r="${c.k}" value="${esc(d[c.k] || "")}">`}</dd>`).join("")}</dl>
     <div class="sub mt">La date de mise à jour est posée automatiquement à l'enregistrement.</div>
-    <div class="acts"><button class="prim" style="background:${cfg.accent};border-color:${cfg.accent}" data-act="saver">Enregistrer</button><button data-close="1">Annuler</button>
+    <div class="acts"><button class="prim" style="background:${cfg.accent};border-color:${cfg.accent}" data-act="saver">Enregistrer</button><button data-close="cancel">Annuler</button>
     ${isNew ? "" : `<button class="del" data-act="delr">Supprimer</button>`}</div>
   </aside></div>`;
 }
@@ -1616,8 +1663,11 @@ function panelSecurite() {
       : "Base locale IndexedDB, doublée dans le stockage local. Aucune donnée ne sort du poste."}</div></div>
       <span class="pill ${DESKTOP || state.persist === "garanti" ? "ok" : "na"}">${DESKTOP ? "fichiers" : esc(state.persist)}</span></div>
 
-    <div class="secrow"><div><b>Code d'accès</b><div class="sub">${on ? "Données chiffrées en AES-256 sur le disque. Verrouillage automatique après 15 minutes d'inactivité." : "Sans code, les données sont lisibles par quiconque ouvre ce profil de navigateur."}</div></div>
-      ${on ? `<button data-act="delpass">Retirer</button>` : `<button class="prim" data-act="setpass">Définir</button>`}</div>
+    <div class="secrow"><div><b>Code d'accès</b><div class="sub">${on ? "Données chiffrées en AES-256 sur le disque. Verrouillage automatique après 15 minutes d'inactivité." : DESKTOP ? "Sans code, les fichiers de données sont lisibles par quiconque ouvre cette session Windows." : "Sans code, les données sont lisibles par quiconque ouvre ce profil de navigateur."}</div>
+      ${state.passForm ? `<div class="passf"><input type="password" id="pass1" placeholder="Nouveau code (4 caractères minimum)" autocomplete="new-password"><input type="password" id="pass2" placeholder="Confirmez le code" autocomplete="new-password">
+        <div class="sub">Aucune récupération possible en cas d'oubli.</div>${state.passErr ? `<div class="err">${esc(state.passErr)}</div>` : ""}
+        <div class="fx"><button class="prim" data-act="dopass">Enregistrer le code</button><button data-act="nopass">Annuler</button></div></div>` : ""}</div>
+      ${on ? `<button data-act="delpass">Retirer</button>` : state.passForm ? "" : `<button class="prim" data-act="setpass">Définir</button>`}</div>
 
     <div class="secrow"><div><b>Sauvegarde automatique</b><div class="sub">Choisissez un dossier (OneDrive, disque réseau). Un JSON y est réécrit à chaque enregistrement, plus une copie datée par jour.${DESKTOP && Backup.dirLabel ? "<br>" + esc(Backup.dirLabel) : ""}</div></div>
       <div class="fx"><span class="pill ${state.backup === "actif" ? "ok" : state.backup === "non configuré" || state.backup === "non disponible" ? "na" : "no"}">${esc(state.backup)}</span>
@@ -1637,7 +1687,10 @@ document.addEventListener("click", async (e) => {
   const d = state.draft;
 
   if (e.target.classList.contains("ov") || (t.dataset.close !== undefined && t.tagName === "BUTTON")) {
-    state.drawer = null; state.draft = null; state.imp = null; state.panel = null; return render();
+    if (t.dataset.close === "cancel" && state.dirty && !confirm("Abandonner les modifications de cette fiche ?")) return;
+    if (t.dataset.close !== "cancel" && state.dirty) return commitDraft();
+    if (state.dirty) dropDraft();
+    state.drawer = null; state.draft = null; state.imp = null; state.panel = null; state.passForm = false; state.passErr = ""; return render();
   }
   if (t.dataset.tab) { state.tab = t.dataset.tab; state.f = {}; state.q = ""; state.page = 0; return render(); }
   if (t.dataset.view) { state.view = t.dataset.view; return render(); }
@@ -1653,25 +1706,17 @@ document.addEventListener("click", async (e) => {
     await Promise.all([Vault.set("campaigns", state.campaigns), Vault.set("ref_adserver", state.adserver), Vault.set("ref_adverif", state.adverif)]);
     state.snaps = (await Vault.get("snapshots")) || []; state.panel = null; render(); return Backup.write(true);
   }
-  if (t.dataset.dellp !== undefined) { d.lps.splice(+t.dataset.dellp, 1); return render(); }
+  if (t.dataset.dellp !== undefined) { d.lps.splice(+t.dataset.dellp, 1); touchDraft(); return render(); }
 
   const cfg = REFS[state.tab];
   switch (t.dataset.act) {
     case "newc": state.draft = norm({ uid: "c" + Date.now(), c: state.client !== "Tous" ? state.client : "", a: "", id: "", d1: "", d2: "", t: "" }); state.drawer = "campaign"; return render();
-    case "addlp": d.lps.push({ url: "" }); return render();
-    case "savec": {
-      const c = Object.assign({}, d); delete c.al; delete c.s;
-      state.campaigns = state.campaigns.some((x) => x.uid === c.uid) ? state.campaigns.map((x) => (x.uid === c.uid ? c : x)) : [c].concat(state.campaigns);
-      state.drawer = null; state.draft = null; render(); return save("suivi");
-    }
-    case "delc": if (!confirm("Supprimer définitivement cette campagne ?")) return; state.campaigns = state.campaigns.filter((x) => x.uid !== d.uid); state.drawer = null; state.draft = null; render(); return save("suivi");
+    case "addlp": d.lps.push({ url: "" }); touchDraft(); return render();
+    case "savec": return commitCampaign(d);
+    case "delc": if (!confirm("Supprimer définitivement cette campagne ?")) return; state.campaigns = state.campaigns.filter((x) => x.uid !== d.uid); state.drawer = null; state.draft = null; dropDraft(); render(); return save("suivi");
     case "newrow": state.draft = { uid: "r" + Date.now() }; state.drawer = "row"; return render();
-    case "saver": {
-      const r = Object.assign({}, d, { maj: todayISO() });
-      state[cfg.key] = state[cfg.key].some((x) => x.uid === r.uid) ? state[cfg.key].map((x) => (x.uid === r.uid ? r : x)) : [r].concat(state[cfg.key]);
-      state.drawer = null; state.draft = null; render(); return save(state.tab);
-    }
-    case "delr": if (!confirm("Supprimer cette ligne du référentiel ?")) return; state[cfg.key] = state[cfg.key].filter((x) => x.uid !== d.uid); state.drawer = null; state.draft = null; render(); return save(state.tab);
+    case "saver": return commitRow(d);
+    case "delr": if (!confirm("Supprimer cette ligne du référentiel ?")) return; state[cfg.key] = state[cfg.key].filter((x) => x.uid !== d.uid); state.drawer = null; state.draft = null; dropDraft(); render(); return save(state.tab);
     case "import": state.imp = { text: "", mode: "merge" }; return render();
     case "doimport": {
       const res = parseTable(state.imp.text, cfg.cols);
@@ -1684,11 +1729,14 @@ document.addEventListener("click", async (e) => {
       if (!(await unlock($("#passIn").value))) { state.lockErr = "Code incorrect."; return render(); }
       state.lockErr = ""; return;
     }
-    case "setpass": {
-      const p1 = prompt("Nouveau code d'accès (aucune récupération possible en cas d'oubli) :");
-      if (!p1) return;
-      if (p1.length < 4) return alert("Code trop court, 4 caractères minimum.");
-      if (prompt("Confirmez le code :") !== p1) return alert("Les deux saisies diffèrent.");
+    /* saisie dans la fenêtre : prompt() n'existe pas dans l'application de bureau */
+    case "setpass": state.passForm = true; state.passErr = ""; render(); return $("#pass1").focus();
+    case "nopass": state.passForm = false; state.passErr = ""; return render();
+    case "dopass": {
+      const p1 = $("#pass1").value, p2 = $("#pass2").value;
+      if (p1.length < 4) { state.passErr = "Code trop court, 4 caractères minimum."; render(); return $("#pass1").focus(); }
+      if (p1 !== p2) { state.passErr = "Les deux saisies diffèrent."; render(); return $("#pass1").focus(); }
+      state.passForm = false; state.passErr = "";
       await setPasscode(p1); armIdle();
       alert("Code enregistré, données chiffrées sur ce poste.\nGardez une sauvegarde à jour : sans le code, elles sont irrécupérables.");
       return render();
@@ -1698,7 +1746,11 @@ document.addEventListener("click", async (e) => {
       await removePasscode(); return render();
     case "chooseDir": return Backup.choose();
     case "grantdir": return Backup.grant();
-    case "csv": return download(cfg.key + "_" + todayISO() + ".csv", "\uFEFF" + toCSV(state[cfg.key], cfg.cols), "text/csv;charset=utf-8");
+    case "csv": {
+      const name = cfg.key + "_" + todayISO() + ".csv", payload = "\uFEFF" + toCSV(state[cfg.key], cfg.cols);
+      if (DESKTOP) return window.desktop.exportFile(name, payload);
+      return download(name, payload, "text/csv;charset=utf-8");
+    }
     case "backup": {
       const payload = JSON.stringify(exportObj(), null, 1), name = "adops_sauvegarde_" + todayISO() + ".json";
       if (DESKTOP) { await window.desktop.exportFile(name, payload); return; }
@@ -1719,6 +1771,7 @@ document.addEventListener("input", (e) => {
   if (el.dataset.set) { state[el.dataset.set === "client" ? "client" : "q"] = el.value.replace(/^Tous les clients$/, "Tous"); state.page = 0; return softRender(); }
   if (el.id === "impText") { state.imp.text = el.value; return render(); }
   if (!d) return;
+  touchDraft();
   if (el.dataset.c) { d[el.dataset.c] = el.value; return refreshStep(); }
   if (el.dataset.r) { d[el.dataset.r] = el.value; return; }
   if (el.dataset.u) { d.utm[el.dataset.u] = el.value; return refreshPrev(); }
@@ -1730,6 +1783,7 @@ document.addEventListener("change", (e) => {
   if (el.dataset.filter !== undefined) { state.f[el.dataset.filter] = el.value; state.page = 0; return render(); }
   if (el.dataset.set === "client") { state.client = el.value === "Tous les clients" ? "Tous" : el.value; return render(); }
   if (!d) return;
+  touchDraft();
   if (el.dataset.tog) { d[el.dataset.tog] = el.checked; return render(); }
   if (el.dataset.gate) {
     const k = el.dataset.gate, t = d.tasks[k];
@@ -1773,7 +1827,10 @@ if (document.getElementById("restoreFile")) {
   });
 }
 
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && document.activeElement && /^pass[12]$/.test(document.activeElement.id)) document.querySelector('[data-act="dopass"]').click(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && state.locked && document.activeElement && document.activeElement.id === "passIn") document.querySelector('[data-act="unlock"]').click(); });
+if (DESKTOP && window.desktop.onFlush) window.desktop.onFlush(commitDraft);
+window.addEventListener("beforeunload", () => { persistDraft(); });
 boot();
 
 </script>
