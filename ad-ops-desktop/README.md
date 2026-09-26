@@ -35,6 +35,26 @@ Tous ces fichiers sont dans l'artefact **Suivi-ad-ops-installeurs-et-DSI** de Gi
 
 La version sans installation n'échappe pas aux règles du poste. Si l'ordinateur refuse de lancer `Suivi ad ops.exe`, c'est une règle de votre entreprise : passez par la DSI.
 
+## Suivi des campagnes
+
+- **Quatre vues :**
+  - **Ticket** : une ligne large par campagne, avec toutes les infos (étape, ticket, dates, régies, taggage, dernier et prochain encours, particularité, alertes).
+  - **Pipeline** : les campagnes en colonnes, par phase.
+  - **Toutes** : un tableau de toutes les campagnes.
+  - **Archivées** : les campagnes retirées des autres vues.
+- **Couleurs :** une campagne **en ligne** a un fond vert pâle, une campagne **terminée** un fond gris sombre.
+- **Menu ⋯** à droite de chaque campagne :
+  - **Archiver** retire la campagne des vues sans la supprimer. **Désarchiver** la fait revenir.
+  - **Dupliquer** crée la même fiche avec les encours remis à zéro.
+  - **Supprimer** demande une confirmation, et une version restaurable reste dans le panneau Sécurité.
+- **Onglet Backup :** exporte en **Excel (.xlsx)** les campagnes en cours, c'est-à-dire ni archivées ni terminées. Le tableau a quatre colonnes :
+  - **Campagne**.
+  - **Info** : client, nom adserver, ID agence, ticket, dates, étape, régies, taggage, particularité, alertes.
+  - **Déjà effectué** : chaque encours fait, avec sa date et son commentaire.
+  - **Reste à effectuer** : le prochain encours est marqué d'une flèche.
+
+  Le même onglet donne accès à la sauvegarde complète et à sa restauration.
+
 ## Tout s'enregistre tout seul
 
 Vous n'avez rien à faire :

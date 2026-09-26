@@ -78,9 +78,11 @@ ipcMain.handle("backup:write", async (_e, payload, force) => {
   } catch (e) { return "ERR:" + e.message; }
 });
 ipcMain.handle("file:export", async (_e, name, payload) => {
-  const r = await dialog.showSaveDialog(win, { defaultPath: name });
+  const ext = path.extname(name).slice(1);
+  const r = await dialog.showSaveDialog(win, { defaultPath: name, filters: ext ? [{ name: ext.toUpperCase(), extensions: [ext] }] : [] });
   if (r.canceled || !r.filePath) return false;
-  await fsp.writeFile(r.filePath, payload, "utf8");
+  /* texte (JSON, CSV) ou octets (classeur Excel) */
+  await fsp.writeFile(r.filePath, typeof payload === "string" ? payload : Buffer.from(payload));
   return true;
 });
 ipcMain.handle("file:import", async () => {

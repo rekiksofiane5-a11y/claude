@@ -46,6 +46,43 @@ textarea{resize:vertical}
 .tools input[data-set=q]{flex:1 1 160px;max-width:250px}
 .seg{margin-left:auto;display:flex;gap:4px;background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:3px}
 .seg button{border:none;padding:6px 12px;border-radius:6px;background:transparent}
+/* bouton sélectionné : toujours foncé avec texte blanc, y compris au survol */
+button.on,.seg button.on,button.on:hover:not(:disabled){background:var(--ink);border-color:var(--ink);color:#fff}
+
+/* couleur des campagnes : en ligne = vert pâle, terminée = gris sombre */
+.live{--rowbg:#E3F4EA}
+.done{--rowbg:#3B4150;color:#F2F4F8}
+.row.live,.row.done,tr.live td,tr.done td,.mini.live{background:var(--rowbg)}
+.row.live:hover,tr.live:hover td,.mini.live:hover{background:#D3EDDD}
+.row.done:hover,tr.done:hover td{background:#454C5D}
+.done .sub,.done .m,.done .rt,.done .kv span,.done .al{color:#C7CDD9}
+.done .ttl,.done .rt b,.done .kv b{color:#fff}
+.done .bar{background:#5A6275}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.badge.live{background:#1B7A5A;color:#fff}
+.badge.done{background:#1F2430;color:#fff}
+.badge.arch{background:var(--line);color:var(--ink2)}
+
+/* vue Ticket : lignes larges avec toutes les infos */
+.tk{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:start}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 16px;margin-top:8px;font-size:12.5px}
+.kv span{display:block;color:var(--ink3);font-size:11px}
+.kv b{font-weight:500;color:var(--ink);word-break:break-word}
+.tk .part{margin-top:8px;font-size:12.5px;color:var(--ink2);white-space:pre-line}
+.done .tk .part{color:#DDE1E8}
+
+/* menu d'actions d'une campagne */
+.dots{padding:2px 9px;font-size:16px;line-height:1.2;border-radius:6px;background:transparent}
+.done .dots{color:#fff;border-color:#5A6275}
+td.actc{width:1%;text-align:right}
+#pop .menu{position:fixed;z-index:40;background:var(--surf);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(20,26,43,.16);padding:4px;min-width:170px}
+#pop .menu button{display:block;width:100%;text-align:left;border:none;background:transparent;padding:8px 12px;color:var(--ink)}
+#pop .menu button:hover{background:var(--soft)}
+#pop .menu button.del{color:var(--red);margin:0}
+
+/* onglet Backup */
+.bk td{white-space:pre-line;vertical-align:top;min-width:200px}
+.bk td:first-child{font-weight:500}
 .note{font-size:12.5px;color:var(--ink2);margin-bottom:12px}
 .note i{font-style:italic}
 
@@ -158,6 +195,7 @@ dt{color:var(--ink3);padding-top:7px}dd{margin:0}
 </div></div>
 <div id="wrap"><div id="head"></div><div id="main"></div></div>
 <div id="drawer"></div>
+<div id="pop"></div>
 <script>
 const SEED_ADSERVER = [
     ["Adot","Adot","Adform","NATIVEAD","Multidevice","Partenaire","Oui","Oui","Oui","Oui","2025-08-25"],
@@ -1392,7 +1430,7 @@ function download(name, content, type) {
 }
 
 /* ===================== État ===================== */
-const state = { tab: "suivi", campaigns: [], adserver: [], adverif: [], f: {}, q: "", client: "Tous", view: "flux", page: 0, draft: null, drawer: null, imp: null, saved: "", locked: false, boot: true, panel: null, backup: "", persist: "", snaps: [], lockErr: "", dirty: false };
+const state = { tab: "suivi", campaigns: [], adserver: [], adverif: [], f: {}, q: "", client: "Tous", view: "ticket", page: 0, draft: null, drawer: null, imp: null, saved: "", locked: false, boot: true, panel: null, backup: "", persist: "", snaps: [], lockErr: "", dirty: false, menu: null };
 const esc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
 const $ = (s) => document.querySelector(s);
 
@@ -1473,7 +1511,7 @@ function commitDraft() {
 function paintStatus() { const e = $("#status"); if (e) e.textContent = state.saved; }
 
 /* ===================== Rendu ===================== */
-const SECTIONS = [{ k: "suivi", l: "Suivi opérationnel", c: "#2743F0" }, { k: "adserver", l: "Adserver", c: "#D9422B" }, { k: "adverif", l: "Adverification", c: "#1E8E4E" }];
+const SECTIONS = [{ k: "suivi", l: "Suivi opérationnel", c: "#2743F0" }, { k: "adserver", l: "Adserver", c: "#D9422B" }, { k: "adverif", l: "Adverification", c: "#1E8E4E" }, { k: "backup", l: "Backup", c: "#7A4FD6" }];
 
 function render() {
   if (state.boot) return;
@@ -1487,8 +1525,9 @@ function render() {
   const sec = SECTIONS.find((s) => s.k === state.tab);
   $("#nav").innerHTML = SECTIONS.map((s) => `<button class="tab${state.tab === s.k ? " on" : ""}" data-tab="${s.k}" style="--ac:${s.c}">${s.l}</button>`).join("");
   $("#head").innerHTML = `<h1>${sec.l}</h1><div class="rule" style="background:${sec.c}"></div>`;
-  $("#main").innerHTML = state.tab === "suivi" ? viewSuivi() : viewRef(REFS[state.tab]);
+  $("#main").innerHTML = state.tab === "suivi" ? viewSuivi() : state.tab === "backup" ? viewBackup() : viewRef(REFS[state.tab]);
   $("#drawer").innerHTML = state.drawer === "campaign" ? drawerCampaign() : state.drawer === "row" ? drawerRow() : state.imp ? modalImport() : state.panel === "sec" ? panelSecurite() : "";
+  $("#pop").innerHTML = state.menu ? popMenu() : "";
   $("#secState").textContent = (Vault.meta && Vault.meta.enc ? "protégé" : "sans code") + " · sauvegarde " + state.backup;
   paintStatus();
 }
@@ -1497,49 +1536,167 @@ function render() {
 function enriched() { return state.campaigns.map(norm).map((c) => { const s = stepOf(c); const x = Object.assign({}, c, { s }); x.al = alertsFor(x); return x; }); }
 function bar(n, d) { return `<div class="bar"><i style="width:${d ? (n / d) * 100 : 0}%"></i></div>`; }
 
+/* en ligne = vert pâle, terminée = gris sombre */
+const isDone = (c) => c.s === "Terminée";
+const rowCls = (c) => (c.s === "En ligne" ? " live" : isDone(c) ? " done" : "");
+const badge = (c) => (c.arch ? `<span class="badge arch">archivée</span>` : c.s === "En ligne" ? `<span class="badge live">en ligne</span>` : isDone(c) ? `<span class="badge done">terminée</span>` : "");
+const topLvl = (c) => (c.al.length ? Math.max.apply(null, c.al.map((a) => a.lvl)) : 0);
+const lvlColor = (l) => (l === 2 ? "var(--red)" : l ? "var(--amber)" : "var(--line)");
+const dots = (c) => `<button class="dots" data-menu="${c.uid}" title="Actions" aria-label="Actions">⋯</button>`;
+const lastDone = (c) => { const d = gatesFor(c).filter((g) => c.tasks[g.k] && c.tasks[g.k].ok); return d.length ? d[d.length - 1] : null; };
+
+function ticketRow(c) {
+  const g = nextGate(c), ld = lastDone(c), kv = (l, v) => `<div><span>${l}</span><b>${v}</b></div>`;
+  return `<div class="row${rowCls(c)}" data-open="${c.uid}" style="border-left-color:${lvlColor(topLvl(c))}"><div class="tk">
+    <div class="grow"><div class="ttl">${esc(lbl(c))}${badge(c)}</div>${c.n ? `<div class="sub">${esc(c.n)}</div>` : ""}
+      <div class="kv">${kv("Étape", esc(c.s))}${kv("Ticket Issue", esc(c.t || "—"))}${kv("Départ → fin", fmtD(c.d1) + " → " + fmtD(c.d2))}${kv("Régies", esc(c.rg || "—"))}
+      ${kv("Taggage", c.tagOn ? esc(c.tagType || "activé") + ((c.lps || []).filter((l) => l.url).length ? " · " + c.lps.filter((l) => l.url).length + " LP" : "") : "non")}
+      ${kv("Dernier encours fait", ld ? esc(ld.l) + " · " + fmtD(c.tasks[ld.k].at) : "—")}${kv("Prochain encours", g ? esc(g.l) : "tout est validé")}</div>
+      ${c.p ? `<div class="part">${esc(c.p)}</div>` : ""}
+      ${c.al.map((a) => `<div class="al"><b style="color:${lvlColor(a.lvl)}">${esc(a.r)}</b> — ${esc(a.t)}</div>`).join("")}</div>
+    <div class="rt"><div class="prog">${bar(doneN(c), gatesFor(c).length)}<span>${doneN(c)}/${gatesFor(c).length}</span></div></div>
+    <div>${dots(c)}</div></div></div>`;
+}
+
 function viewSuivi() {
-  const all = enriched();
-  const clients = ["Tous"].concat(Array.from(new Set(all.map((c) => c.c).filter(Boolean))).sort());
-  const rows = all.filter((c) => (state.client === "Tous" || c.c === state.client) && (!state.q || (lbl(c) + " " + (c.n || "")).toLowerCase().indexOf(state.q.toLowerCase()) >= 0));
-  const flux = rows.filter((c) => c.al.length).sort((a, b) => Math.max.apply(null, b.al.map((x) => x.lvl)) - Math.max.apply(null, a.al.map((x) => x.lvl)) || String(a.d2 || "9").localeCompare(String(b.d2 || "9")));
-  const bloq = flux.filter((c) => c.al.some((a) => a.lvl === 2)).length;
-  const kpi = [[bloq, "à débloquer", "var(--red)"], [flux.length - bloq, "à surveiller", "var(--amber)"], [rows.filter((c) => c.s === "En ligne").length, "en ligne", "var(--ink)"], [rows.filter((c) => ["Terminée", "Réconciliée"].indexOf(c.s) < 0).length, "ouvertes", "var(--ink)"]];
+  const everything = enriched();
+  const clients = ["Tous"].concat(Array.from(new Set(everything.map((c) => c.c).filter(Boolean))).sort());
+  const match = (c) => (state.client === "Tous" || c.c === state.client) && (!state.q || (lbl(c) + " " + (c.n || "") + " " + (c.t || "")).toLowerCase().indexOf(state.q.toLowerCase()) >= 0);
+  const archived = everything.filter((c) => c.arch && match(c));
+  const rows = everything.filter((c) => !c.arch && match(c));
+  const bloq = rows.filter((c) => topLvl(c) === 2).length;
+  const kpi = [[bloq, "à débloquer", "var(--red)"], [rows.filter((c) => topLvl(c) === 1).length, "à surveiller", "var(--amber)"], [rows.filter((c) => c.s === "En ligne").length, "en ligne", "var(--green)"], [rows.filter((c) => ["Terminée", "Réconciliée"].indexOf(c.s) < 0).length, "ouvertes", "var(--ink)"]];
 
   let body = "";
   if (!state.campaigns.length) {
     body = `<div class="card empty"><div class="big">Aucune campagne pour l'instant</div><p>Créez une campagne avec son client, son nom adserver et son ID agence. L'étape se déduira ensuite des encours cochés.</p><button class="prim" data-act="newc">Ajouter ma première campagne</button></div>`;
-  } else if (state.view === "flux") {
-    body = `<div class="card">` + (flux.length ? flux.map((c) => {
-      const top = Math.max.apply(null, c.al.map((a) => a.lvl));
-      return `<div class="row fx" data-open="${c.uid}" style="border-left-color:${top === 2 ? "var(--red)" : "var(--amber)"}">
-        <div class="grow"><div class="ttl">${esc(lbl(c))}</div>${c.n ? `<div class="sub">${esc(c.n)}</div>` : ""}
-        ${c.al.map((a) => `<div class="al"><b style="color:${a.lvl === 2 ? "var(--red)" : "var(--amber)"}">${esc(a.r)}</b> — ${esc(a.t)}</div>`).join("")}</div>
-        <div class="rt"><b>${esc(c.s)}</b><div>${fmtD(c.d1)} → ${fmtD(c.d2)}</div><div class="prog">${bar(doneN(c), gatesFor(c).length)}<span>${doneN(c)}/${gatesFor(c).length}</span></div></div></div>`;
-    }).join("") : `<div class="empty">Rien à débloquer. Les alertes apparaîtront dès qu'une date approche ou qu'un encours traîne.</div>`) + `</div>`;
+  } else if (state.view === "ticket") {
+    /* alertes d'abord, puis par date de départ ; les terminées en bas */
+    const list = rows.slice().sort((a, b) => isDone(a) - isDone(b) || topLvl(b) - topLvl(a) || String(a.d1 || "9").localeCompare(String(b.d1 || "9")));
+    body = `<div class="card">` + (list.length ? list.map(ticketRow).join("") : `<div class="empty">Aucune campagne ne correspond.</div>`) + `</div>`;
   } else if (state.view === "pipeline") {
     body = `<div class="cols">` + PHASES.map((p) => {
-      const list = rows.filter((c) => STEP_PHASE[c.s] === p.key && c.s !== "Terminée");
+      const list = rows.filter((c) => STEP_PHASE[c.s] === p.key && !isDone(c));
       return `<div class="card pad"><div class="ch"><b>${p.key}</b><span>${list.length}</span></div>` +
-        (list.length ? list.map((c) => {
-          const top = c.al.length ? Math.max.apply(null, c.al.map((a) => a.lvl)) : 0;
-          return `<div class="mini" data-open="${c.uid}" style="border-left-color:${top === 2 ? "var(--red)" : top ? "var(--amber)" : "var(--line)"}">
-            <div class="ttl s">${esc(lbl(c))}</div><div class="sub">${esc(c.s)} · ${fmtD(c.d1)} → ${fmtD(c.d2)}</div>${bar(doneN(c), gatesFor(c).length)}</div>`;
-        }).join("") : `<div class="sub">Aucune campagne</div>`) + `</div>`;
+        (list.length ? list.map((c) => `<div class="mini${rowCls(c)}" data-open="${c.uid}" style="border-left-color:${lvlColor(topLvl(c))}">
+            <div class="ttl s">${esc(lbl(c))}</div><div class="sub">${esc(c.s)} · ${fmtD(c.d1)} → ${fmtD(c.d2)}</div>${bar(doneN(c), gatesFor(c).length)}</div>`).join("") : `<div class="sub">Aucune campagne</div>`) + `</div>`;
     }).join("") + `</div>`;
   } else {
-    body = `<div class="card"><div class="scroll"><table><thead><tr>${["Campagne", "Étape (calculée)", "Encours", "Départ", "Fin", "Alertes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
-      rows.map((c) => `<tr data-open="${c.uid}"><td class="b">${esc(lbl(c))}</td><td class="m">${esc(c.s)}</td><td><div class="prog">${bar(doneN(c), gatesFor(c).length)}<span>${doneN(c)}/${gatesFor(c).length}</span></div></td><td class="m n">${fmtD(c.d1)}</td><td class="m n">${fmtD(c.d2)}</td><td style="color:${c.al.length ? (c.al.some((a) => a.lvl === 2) ? "var(--red)" : "var(--amber)") : "var(--ink3)"};font-weight:${c.al.length ? 600 : 400}">${c.al.length || "—"}</td></tr>`).join("") +
-      `</tbody></table></div></div>`;
+    const list = state.view === "archives" ? archived : rows;
+    body = list.length ? `<div class="card"><div class="scroll"><table><thead><tr>${["Campagne", "Étape (calculée)", "Encours", "Départ", "Fin", "Alertes", ""].map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
+      list.map((c) => `<tr class="${rowCls(c).trim()}" data-open="${c.uid}"><td class="b">${esc(lbl(c))}</td><td class="m">${esc(c.s)}</td><td><div class="prog">${bar(doneN(c), gatesFor(c).length)}<span>${doneN(c)}/${gatesFor(c).length}</span></div></td><td class="m n">${fmtD(c.d1)}</td><td class="m n">${fmtD(c.d2)}</td><td style="color:${c.al.length ? lvlColor(topLvl(c)) : "inherit"};font-weight:${c.al.length ? 600 : 400}">${c.al.length || "—"}</td><td class="actc">${dots(c)}</td></tr>`).join("") +
+      `</tbody></table></div></div>` : `<div class="card empty">${state.view === "archives" ? "Aucune campagne archivée. Archivez une campagne depuis son menu ⋯ pour la retirer des vues sans la supprimer." : "Aucune campagne ne correspond."}</div>`;
   }
 
   return `${state.campaigns.length ? `<div class="kpis">${kpi.map((k) => `<div class="card pad"><div class="num" style="color:${k[2]}">${k[0]}</div><div class="sub">${k[1]}</div></div>`).join("")}</div>` : ""}
   <div class="tools">
     ${clients.length > 1 ? `<select data-set="client">${clients.map((v) => `<option${v === state.client ? " selected" : ""}>${esc(v === "Tous" ? "Tous les clients" : v)}</option>`).join("")}</select>` : ""}
-    <input data-set="q" value="${esc(state.q)}" placeholder="Client, adserver, ID agence…">
+    <input data-set="q" value="${esc(state.q)}" placeholder="Client, adserver, ID agence, ticket…">
     <button class="prim" data-act="newc">Ajouter une campagne</button>
-    <div class="seg">${[["flux", "À traiter"], ["pipeline", "Pipeline"], ["liste", "Toutes"]].map((v) => `<button data-view="${v[0]}"${state.view === v[0] ? ' class="on"' : ""}>${v[1]}</button>`).join("")}</div>
+    <div class="seg">${[["ticket", "Ticket"], ["pipeline", "Pipeline"], ["liste", "Toutes"], ["archives", "Archivées (" + everything.filter((c) => c.arch).length + ")"]].map((v) => `<button data-view="${v[0]}"${state.view === v[0] ? ' class="on"' : ""}>${v[1]}</button>`).join("")}</div>
   </div>${body}
-  <div class="foot">${state.campaigns.length} campagne(s) · l'étape découle du dernier encours coché.</div>`;
+  <div class="foot">${rows.length} campagne(s) active(s)${archived.length ? " · " + archived.length + " archivée(s)" : ""} · l'étape découle du dernier encours coché.</div>`;
+}
+
+/* ---------- Menu d'actions : archiver, dupliquer, supprimer ---------- */
+function popMenu() {
+  const c = state.campaigns.find((x) => x.uid === state.menu.uid);
+  if (!c) return "";
+  const left = Math.max(8, Math.min(state.menu.x - 170, window.innerWidth - 186)), top = Math.min(state.menu.y, window.innerHeight - 140);
+  return `<div class="menu" style="left:${left}px;top:${top}px">
+    <button data-cact="${c.arch ? "unarchive" : "archive"}" data-uid="${c.uid}">${c.arch ? "Désarchiver" : "Archiver"}</button>
+    <button data-cact="dup" data-uid="${c.uid}">Dupliquer</button>
+    <button class="del" data-cact="del" data-uid="${c.uid}">Supprimer</button></div>`;
+}
+function campaignAction(act, uid) {
+  const c = state.campaigns.find((x) => x.uid === uid);
+  state.menu = null;
+  if (!c) return render();
+  if (act === "del") {
+    if (!confirm("Supprimer définitivement « " + lbl(c) + " » ?\nUne version restaurable est conservée dans le panneau Sécurité.")) return render();
+    state.campaigns = state.campaigns.filter((x) => x.uid !== uid);
+  } else if (act === "archive" || act === "unarchive") {
+    state.campaigns = state.campaigns.map((x) => (x.uid === uid ? Object.assign({}, x, { arch: act === "archive", archAt: act === "archive" ? todayISO() : null }) : x));
+  } else if (act === "dup") {
+    /* même fiche, encours remis à zéro, pour relancer une campagne similaire */
+    const copy = Object.assign(JSON.parse(JSON.stringify(c)), { uid: "c" + Date.now(), tasks: {}, arch: false, archAt: null, n: ((c.n || "") + " (copie)").trim() });
+    const i = state.campaigns.findIndex((x) => x.uid === uid);
+    state.campaigns = state.campaigns.slice(0, i + 1).concat([copy], state.campaigns.slice(i + 1));
+    state.draft = norm(JSON.parse(JSON.stringify(copy))); state.drawer = "campaign";
+  }
+  render();
+  return save("suivi");
+}
+
+/* ---------- Backup : export Excel des campagnes en cours ---------- */
+const fmtDay = (s) => { const d = parseD(s); return d ? d.toLocaleDateString("fr-FR") : ""; };
+function backupRows() {
+  return enriched().filter((c) => !c.arch && !isDone(c)).sort((a, b) => String(a.d1 || "9").localeCompare(String(b.d1 || "9"))).map((c) => {
+    const gs = gatesFor(c), done = gs.filter((g) => c.tasks[g.k] && c.tasks[g.k].ok), todo = gs.filter((g) => !(c.tasks[g.k] && c.tasks[g.k].ok));
+    const note = (g) => (c.tasks[g.k] && c.tasks[g.k].note ? " — " + c.tasks[g.k].note : "");
+    const info = [
+      "Client : " + (c.c || "—"), "Nom adserver : " + (c.a || "—"), "ID agence : " + (c.id || "—"), "Ticket Issue : " + (c.t || "—"),
+      "Départ : " + (fmtDay(c.d1) || "—") + " · Fin : " + (fmtDay(c.d2) || "—"), "Étape : " + c.s + " (" + done.length + "/" + gs.length + ")",
+      c.rg ? "Régies : " + c.rg : "", c.n ? "Libellé interne : " + c.n : "",
+      c.tagOn ? "Taggage : " + (c.tagType || "activé") + ((c.lps || []).filter((l) => l.url).length ? " · LP : " + c.lps.filter((l) => l.url).map((l) => l.url).join(", ") : "") : "Taggage : non",
+      c.p ? "Particularité : " + c.p : "", c.al.length ? "Alertes : " + c.al.map((a) => a.r + " (" + a.t + ")").join(" ; ") : "",
+    ].filter(Boolean).join("\n");
+    return [lbl(c), info,
+      done.map((g) => "✓ " + g.l + (c.tasks[g.k].at ? " — le " + fmtDay(c.tasks[g.k].at) : "") + note(g)).join("\n") || "Rien pour l'instant",
+      todo.map((g, i) => (i === 0 ? "→ " : "• ") + g.l + note(g)).join("\n") || "Tout est validé"];
+  });
+}
+const BK_HEAD = ["Campagne", "Info", "Déjà effectué", "Reste à effectuer"];
+function viewBackup() {
+  const rows = backupRows();
+  return `<div class="card pad"><div class="fx sb"><div><b>Export Excel des campagnes en cours</b>
+      <div class="sub">${rows.length} campagne(s) · les campagnes archivées et terminées ne sont pas exportées</div></div>
+      <button class="prim" data-act="xlsx"${rows.length ? "" : " disabled"}>Exporter en Excel</button></div></div>
+    ${rows.length ? `<div class="card mt"><div class="scroll"><table class="bk"><thead><tr>${BK_HEAD.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>` : `<div class="card empty mt">Aucune campagne en cours à exporter.</div>`}
+    <div class="card pad mt"><b>Sauvegarde complète</b><div class="sub">Toutes les données (campagnes, archives, référentiels) dans un fichier restaurable.</div>
+      <div class="acts"><button data-act="backup">Exporter un fichier de sauvegarde</button><button data-act="restore">Restaurer un fichier</button><button data-act="secpanel">Sauvegarde automatique et versions</button></div></div>`;
+}
+
+/* ---------- Fichier .xlsx minimal, fabriqué sur place : aucune bibliothèque, aucun réseau ---------- */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+function zipStore(files) {
+  const parts = [], central = []; let off = 0;
+  const u16 = (v) => [v & 255, (v >>> 8) & 255], u32 = (v) => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  files.forEach(([name, text]) => {
+    const nm = ENC.encode(name), data = ENC.encode(text), crc = crc32(data);
+    const common = [...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(nm.length), ...u16(0)];
+    const local = Uint8Array.from([...u32(0x04034b50), ...common]);
+    parts.push(local, nm, data);
+    central.push(Uint8Array.from([...u32(0x02014b50), ...u16(20), ...common, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nm);
+    off += local.length + nm.length + data.length;
+  });
+  const csize = central.reduce((n, p) => n + p.length, 0);
+  const end = Uint8Array.from([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(csize), ...u32(off), ...u16(0)]);
+  const all = parts.concat(central, [end]), out = new Uint8Array(all.reduce((n, p) => n + p.length, 0));
+  let p = 0; all.forEach((a) => { out.set(a, p); p += a.length; });
+  return out;
+}
+function buildXlsx(head, rows, widths, sheetName) {
+  const x = (v) => String(v == null ? "" : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
+  const col = (i) => String.fromCharCode(65 + i);
+  const row = (r, n, st) => `<row r="${n}">${r.map((v, i) => `<c r="${col(i)}${n}" t="inlineStr" s="${st}"><is><t xml:space="preserve">${x(v)}</t></is></c>`).join("")}</row>`;
+  const last = col(head.length - 1) + (rows.length + 1);
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols><sheetData>${row(head, 1, 2)}${rows.map((r, i) => row(r, i + 2, 1)).join("")}</sheetData><autoFilter ref="A1:${last}"/></worksheet>`;
+  return zipStore([
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(sheetName)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${x(sheetName)}'!$A$1:$${last.replace(/(\d+)$/, "$$$1")}</definedName></definedNames></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF151B2E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border/><border><left style="thin"><color rgb="FFDEE1E9"/></left><right style="thin"><color rgb="FFDEE1E9"/></right><top style="thin"><color rgb="FFDEE1E9"/></top><bottom style="thin"><color rgb="FFDEE1E9"/></bottom></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ["xl/worksheets/sheet1.xml", sheet],
+  ]);
+}
+async function exportXlsx() {
+  const rows = backupRows(), name = "campagnes-en-cours_" + todayISO() + ".xlsx";
+  const bytes = buildXlsx(BK_HEAD, rows, [38, 60, 60, 50], "Campagnes en cours");
+  if (DESKTOP) return window.desktop.exportFile(name, bytes);
+  return download(name, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
 /* ---------- Référentiel ---------- */
@@ -1606,7 +1763,7 @@ function drawerCampaign() {
     }).join("")}
 
     <div class="acts"><button class="prim" data-act="savec">Enregistrer</button><button data-close="cancel">Annuler</button>
-    ${isNew ? "" : `<button class="del" data-act="delc">Supprimer</button>`}</div>
+    ${isNew ? "" : `<button data-act="archc">${d.arch ? "Désarchiver" : "Archiver"}</button><button class="del" data-act="delc">Supprimer</button>`}</div>
   </aside></div>`;
 }
 
@@ -1682,7 +1839,14 @@ function panelSecurite() {
 
 /* ===================== Événements ===================== */
 document.addEventListener("click", async (e) => {
-  const t = e.target.closest("[data-tab],[data-view],[data-open],[data-row],[data-act],[data-page],[data-close],[data-mode],[data-dellp]");
+  const t = e.target.closest("[data-tab],[data-view],[data-open],[data-row],[data-act],[data-page],[data-close],[data-mode],[data-dellp],[data-menu],[data-cact]");
+  if (t && t.dataset.cact) return campaignAction(t.dataset.cact, t.dataset.uid);
+  if (t && t.dataset.menu) {
+    const r = t.getBoundingClientRect();
+    state.menu = state.menu && state.menu.uid === t.dataset.menu ? null : { uid: t.dataset.menu, x: r.right, y: r.bottom + 4 };
+    return render();
+  }
+  if (state.menu) { state.menu = null; render(); if (!t) return; }
   if (!t) return;
   const d = state.draft;
 
@@ -1763,6 +1927,8 @@ document.addEventListener("click", async (e) => {
       return;
     }
     case "reveal": return window.desktop.reveal();
+    case "xlsx": return exportXlsx();
+    case "archc": d.arch = !d.arch; d.archAt = d.arch ? todayISO() : null; return commitCampaign(d);
   }
 });
 
@@ -1827,6 +1993,10 @@ if (document.getElementById("restoreFile")) {
   });
 }
 
+const closeMenu = () => { if (state.menu) { state.menu = null; $("#pop").innerHTML = ""; } };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+window.addEventListener("scroll", closeMenu, true);
+window.addEventListener("resize", closeMenu);
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && document.activeElement && /^pass[12]$/.test(document.activeElement.id)) document.querySelector('[data-act="dopass"]').click(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && state.locked && document.activeElement && document.activeElement.id === "passIn") document.querySelector('[data-act="unlock"]').click(); });
 if (DESKTOP && window.desktop.onFlush) window.desktop.onFlush(commitDraft);
