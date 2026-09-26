@@ -1,6 +1,6 @@
 /* Suivi ad ops — processus principal.
    Aucune connexion réseau. Les données vivent dans des fichiers JSON sur le poste. */
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, session } = require("electron");
 const fs = require("fs");
 const fsp = fs.promises;
 const path = require("path");
@@ -110,7 +110,7 @@ function buildMenu() {
       { role: "quit", label: "Quitter" },
     ] },
     { label: "Édition", submenu: [{ role: "undo", label: "Annuler" }, { role: "redo", label: "Rétablir" }, { type: "separator" }, { role: "cut", label: "Couper" }, { role: "copy", label: "Copier" }, { role: "paste", label: "Coller" }, { role: "selectAll", label: "Tout sélectionner" }] },
-    { label: "Affichage", submenu: [{ role: "reload", label: "Recharger" }, { role: "zoomIn", label: "Agrandir" }, { role: "zoomOut", label: "Réduire" }, { role: "resetZoom", label: "Taille normale" }, { type: "separator" }, { role: "togglefullscreen", label: "Plein écran" }, { role: "toggleDevTools", label: "Outils de développement" }] },
+    { label: "Affichage", submenu: [{ role: "reload", label: "Recharger" }, { role: "zoomIn", label: "Agrandir" }, { role: "zoomOut", label: "Réduire" }, { role: "resetZoom", label: "Taille normale" }, { type: "separator" }, { role: "togglefullscreen", label: "Plein écran" }, ...(app.isPackaged ? [] : [{ role: "toggleDevTools", label: "Outils de développement" }])] },
   ]));
 }
 
@@ -120,7 +120,7 @@ function createWindow() {
     width: b.width || 1320, height: b.height || 900, x: b.x, y: b.y, minWidth: 900, minHeight: 600,
     backgroundColor: "#F0F1F5", title: "Suivi ad ops", show: false,
     icon: path.join(__dirname, "build", "icon.png"),
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: !app.isPackaged },
   });
   if (settings.maximized) win.maximize();
   win.once("ready-to-show", () => win.show());
@@ -161,6 +161,11 @@ if (!app.requestSingleInstanceLock()) {
   app.setAppUserModelId("fr.adops.suivi");
   app.whenReady().then(async () => {
     settings = Object.assign(settings, await readJSON(SETTINGS(), {}));
+    /* Poste d'entreprise : aucune requête ne sort des fichiers de l'application,
+       et aucune autorisation (caméra, micro, notifications, position…) n'est jamais accordée. */
+    session.defaultSession.webRequest.onBeforeRequest((d, cb) => cb({ cancel: !/^(file|devtools|data):/.test(d.url) }));
+    session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+    session.defaultSession.setPermissionCheckHandler(() => false);
     buildMenu();
     createWindow();
     app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) { closing = false; createWindow(); } });

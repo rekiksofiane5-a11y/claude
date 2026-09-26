@@ -78,6 +78,11 @@ async function quit(app) {
   const names = await page.textContent("#main");
   for (const n of ["Client Fermer", "Client Quitter", "Client Plantage"]) assert.ok(names.includes(n), n + " absent : " + names);
   console.log("ok  code d'accès : chiffré sur disque, déverrouillage au relancement");
+
+  // 6. aucune requête réseau ne sort de la session, même hors du contrôle de la page (CSP)
+  const net = await app.evaluate(({ session }) => session.defaultSession.fetch("https://example.com/").then(() => "sortie", (e) => "bloquée : " + e.message));
+  assert.ok(net.includes("ERR_BLOCKED_BY_CLIENT"), "doit être bloquée par l'application : " + net);
+  console.log("ok  requête réseau bloquée");
   await quit(app);
 
   fs.rmSync(cfg, { recursive: true, force: true });

@@ -30,8 +30,22 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: ad-ops-desktop/package-lock.json }
       - run: npm ci
       - run: npm run build:win
+      - name: Version HTML autonome et empreintes SHA-256
+        shell: pwsh
+        run: |
+          Copy-Item renderer/index.html dist/Suivi-ad-ops-navigateur.html
+          Copy-Item DSI.md dist/DSI.md
+          Get-ChildItem dist/* -File -Include *.exe,*.msi,*.html -Name |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash "dist/$_" -Algorithm SHA256).Hash.ToLower(), $_ } |
+            Set-Content dist/SHA256SUMS.txt
+          Get-Content dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Suivi-ad-ops-Windows
-          path: ad-ops-desktop/dist/*.exe
+          path: |
+            ad-ops-desktop/dist/*.exe
+            ad-ops-desktop/dist/*.msi
+            ad-ops-desktop/dist/Suivi-ad-ops-navigateur.html
+            ad-ops-desktop/dist/SHA256SUMS.txt
+            ad-ops-desktop/dist/DSI.md
           if-no-files-found: error

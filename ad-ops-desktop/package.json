@@ -1,21 +1,22 @@
 {
   "name": "ad-ops-suivi",
   "productName": "Suivi ad ops",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Suivi opérationnel ad ops — application de bureau autonome",
   "main": "main.js",
   "author": "Sofiane Rekik",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win nsis --x64 --publish never",
+    "build:win": "electron-builder --win nsis msi --x64 --publish never",
     "build:win-portable": "electron-builder --win portable --x64 --publish never",
     "build:mac": "electron-builder --mac dmg --publish never",
-    "test": "node test/e2e.cjs"
+    "test": "node test/e2e.cjs",
+    "build:win-msi": "electron-builder --win msi --x64 --publish never"
   },
   "devDependencies": {
-    "electron": "^32.0.0",
-    "electron-builder": "^25.0.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
     "playwright": "^1.56.1"
   },
   "build": {
@@ -32,7 +33,8 @@
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "msi"
       ],
       "icon": "build/icon.png"
     },
@@ -52,6 +54,15 @@
     "mac": {
       "icon": "build/icon.png"
     },
-    "publish": null
+    "publish": null,
+    "msi": {
+      "perMachine": true,
+      "oneClick": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Suivi ad ops",
+      "runAfterFinish": false,
+      "artifactName": "Suivi-ad-ops-${version}.msi"
+    }
   }
 }

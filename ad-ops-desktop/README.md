@@ -5,7 +5,7 @@ Il fait la même chose que la version HTML : le suivi opérationnel et les réf�
 
 ## Installer
 
-1. Lancez `Suivi-ad-ops-Setup-1.1.0.exe`. L'installation se fait sans question, **sans droits administrateur**, dans votre profil Windows, comme Teams.
+1. Lancez `Suivi-ad-ops-Setup-1.2.0.exe`. L'installation se fait sans question, **sans droits administrateur**, dans votre profil Windows, comme Teams.
 2. L'application s'ouvre toute seule. Un raccourci **Suivi ad ops** est ajouté sur le bureau et dans le menu Démarrer. Vous pouvez l'épingler à la barre des tâches.
 3. Pour qu'elle se lance à l'ouverture de votre session Windows : **Fichier → Lancer au démarrage de Windows**.
 
@@ -13,6 +13,17 @@ Si vous relancez l'application alors qu'elle est déjà ouverte, c'est la fenêt
 La taille et la position de la fenêtre sont conservées d'une ouverture à l'autre.
 
 Pour la désinstaller : Paramètres Windows → Applications. **Vos données sont conservées** après la désinstallation.
+
+## Sur un poste professionnel verrouillé
+
+Sur un PC d'entreprise, l'installation peut être bloquée : AppLocker, WDAC, SmartScreen ou une interdiction d'installer. **Ne contournez pas ces restrictions : faites valider l'application par votre DSI.** Tout ce qu'il lui faut est prévu :
+
+- **`DSI.md`** : la fiche technique à lui transmettre. Elle couvre le réseau (aucun), les données, les droits, le chiffrement, la signature et le déploiement.
+- **`Suivi-ad-ops-1.2.0.msi`** : l'installeur que la DSI déploie elle-même (Intune, SCCM, GPO) dans `Program Files`, là où les règles de contrôle applicatif l'autorisent.
+- **`SHA256SUMS.txt`** : les empreintes qui permettent à la DSI d'autoriser exactement ces fichiers.
+- **`Suivi-ad-ops-navigateur.html`** : une solution d'attente si rien ne peut être installé. Elle s'ouvre dans le navigateur déjà autorisé. Dans ce mode, pensez à activer la sauvegarde automatique dans un dossier (panneau **Sécurité**), car le navigateur peut effacer ses données locales.
+
+Tous ces fichiers sont dans l'artefact **Suivi-ad-ops-Windows** de GitHub Actions.
 
 ## Tout s'enregistre tout seul
 
@@ -42,6 +53,7 @@ Pour ouvrir le dossier des données : **Fichier → Ouvrir le dossier des donné
 ## Sécurité
 
 - Aucune requête réseau : la politique de sécurité du contenu bloque toute connexion (`connect-src 'none'`), la navigation et l'ouverture de fenêtres externes sont bloquées, et le rendu tourne dans le bac à sable (`sandbox`, `contextIsolation`, sans `nodeIntegration`).
+- Toute requête qui ne vise pas un fichier de l'application est annulée, et toute demande d'autorisation (caméra, micro, notifications…) est refusée. Les outils de développement sont désactivés dans la version installée.
 - Le rendu ne touche jamais directement au disque. Il passe par un pont qui n'expose que neuf fonctions.
 - Code d'accès facultatif : chiffrement AES-256-GCM, avec une clé dérivée en PBKDF2-SHA256 (250 000 itérations). Les fichiers sur le disque deviennent des blocs chiffrés, et l'application se verrouille après 15 minutes d'inactivité. Le code se saisit directement dans le panneau **Sécurité**.
 
@@ -51,7 +63,7 @@ Pour ouvrir le dossier des données : **Fichier → Ouvrir le dossier des donné
 npm install
 npm start            # lancer en développement
 npm test             # test de bout en bout sur la vraie application (Linux : xvfb-run -a npm test)
-npm run build:win    # → dist/Suivi-ad-ops-Setup-1.1.0.exe (installeur)
+npm run build:win    # → dist/Suivi-ad-ops-Setup-1.2.0.exe et dist/Suivi-ad-ops-1.2.0.msi
 npm run build:win-portable   # → dist/Suivi-ad-ops-portable.exe (un seul fichier, sans installation)
 ```
 
