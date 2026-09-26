@@ -33,28 +33,28 @@ jobs:
       - name: Version sans installation, version HTML et empreintes SHA-256
         shell: pwsh
         run: |
-          Move-Item dist/win-unpacked "dist/Suivi ad ops"
-          Copy-Item build/LISEZ-MOI.txt "dist/Suivi ad ops/LISEZ-MOI.txt"
-          Copy-Item renderer/index.html dist/Suivi-ad-ops-navigateur.html
+          Move-Item dist/win-unpacked "dist/My Work"
+          Copy-Item build/LISEZ-MOI.txt "dist/My Work/LISEZ-MOI.txt"
+          Copy-Item renderer/index.html dist/My-Work-navigateur.html
           Copy-Item DSI.md dist/DSI.md
-          $files = @(Get-ChildItem dist/* -File -Include *.exe,*.msi,*.html | ForEach-Object Name) + "Suivi ad ops/Suivi ad ops.exe"
+          $files = @(Get-ChildItem dist/* -File -Include *.exe,*.msi,*.html | ForEach-Object Name) + "My Work/My Work.exe"
           $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash "dist/$_" -Algorithm SHA256).Hash.ToLower(), $_ } |
             Set-Content dist/SHA256SUMS.txt
           Get-Content dist/SHA256SUMS.txt
       # Prêt à l'emploi : on décompresse et on double-clique, sans installation
       - uses: actions/upload-artifact@v4
         with:
-          name: Suivi-ad-ops-pret-a-l-emploi
-          path: ad-ops-desktop/dist/Suivi ad ops/
+          name: My-Work-pret-a-l-emploi
+          path: ad-ops-desktop/dist/My Work/
           if-no-files-found: error
       # Pour la DSI : installeurs, version navigateur, empreintes et fiche technique
       - uses: actions/upload-artifact@v4
         with:
-          name: Suivi-ad-ops-installeurs-et-DSI
+          name: My-Work-installeurs-et-DSI
           path: |
             ad-ops-desktop/dist/*.exe
             ad-ops-desktop/dist/*.msi
-            ad-ops-desktop/dist/Suivi-ad-ops-navigateur.html
+            ad-ops-desktop/dist/My-Work-navigateur.html
             ad-ops-desktop/dist/SHA256SUMS.txt
             ad-ops-desktop/dist/DSI.md
           if-no-files-found: error

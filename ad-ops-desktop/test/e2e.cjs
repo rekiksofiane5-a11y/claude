@@ -114,11 +114,22 @@ async function viewsAndExport() {
   // Ticket par défaut, archivées masquées, couleurs des lignes
   assert.strictEqual((await page.textContent('.seg button.on')).trim(), "Ticket");
   assert.strictEqual(await page.$('[data-open="old"]'), null, "une campagne archivée ne doit pas apparaître dans Ticket");
+  await page.mouse.move(2, 300); await page.waitForTimeout(400); // pas de survol pendant la mesure des couleurs
   assert.strictEqual(await bg('.row[data-open="live"]'), "rgb(227, 244, 234)");
   assert.strictEqual(await bg('.row[data-open="done"]'), "rgb(59, 65, 80)");
   assert.strictEqual(await fg('.row[data-open="done"] .ttl'), "rgb(255, 255, 255)");
   assert.ok((await page.textContent('.row[data-open="live"]')).includes("Attention au capping"), "la vue Ticket montre la particularité");
   console.log("ok  vue Ticket : toutes les infos, vert si en ligne, gris sombre si terminée");
+
+  // recherche de la barre de titre : filtre la vue sans perdre le focus
+  await page.click("#gsearch");
+  await page.keyboard.type("encours");
+  await page.waitForTimeout(200);
+  assert.deepStrictEqual(await page.$$eval(".row[data-open]", (r) => r.map((e) => e.dataset.open)), ["wip"]);
+  assert.strictEqual(await page.evaluate(() => document.activeElement.id), "gsearch", "le curseur reste dans la recherche");
+  await page.fill("#gsearch", "");
+  await page.waitForTimeout(200);
+  console.log("ok  recherche dans la barre de titre");
 
   // bouton sélectionné lisible, au repos comme au survol
   for (const v of ["pipeline", "liste", "ticket"]) {

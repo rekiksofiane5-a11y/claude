@@ -1,4 +1,4 @@
-# Suivi ad ops — fiche technique pour la DSI
+# My Work — fiche technique pour la DSI
 
 Cette fiche sert à demander l'autorisation d'installer l'application sur un poste professionnel. Elle décrit ce que fait l'application, ce qu'elle ne fait pas, et comment la déployer.
 
@@ -20,19 +20,19 @@ Chaque compilation (GitHub Actions, sur un runner `windows-latest`) produit :
 
 | Fichier | Usage |
 |---|---|
-| `Suivi-ad-ops-<version>.msi` | **Déploiement par la DSI** (Intune, SCCM/MECM, GPO). Installation pour toutes les sessions, dans `C:\Program Files`. |
-| `Suivi-ad-ops-Setup-<version>.exe` | Installation par l'utilisateur, sans droits administrateur, dans `%LOCALAPPDATA%\Programs`. |
-| Dossier `Suivi ad ops\` (artefact « prêt à l'emploi ») | Application décompressée, lancée directement par `Suivi ad ops.exe`, sans installation. Mêmes fichiers que ceux que posent les installeurs. |
-| `Suivi-ad-ops-navigateur.html` | Version de secours qui s'ouvre dans le navigateur déjà autorisé, sans rien installer |
-| `SHA256SUMS.txt` | Empreintes SHA-256 des fichiers ci-dessus (y compris `Suivi ad ops.exe`), pour vérifier leur intégrité |
+| `My-Work-<version>.msi` | **Déploiement par la DSI** (Intune, SCCM/MECM, GPO). Installation pour toutes les sessions, dans `C:\Program Files`. |
+| `My-Work-Setup-<version>.exe` | Installation par l'utilisateur, sans droits administrateur, dans `%LOCALAPPDATA%\Programs`. |
+| Dossier `My Work\` (artefact « prêt à l'emploi ») | Application décompressée, lancée directement par `My Work.exe`, sans installation. Mêmes fichiers que ceux que posent les installeurs. |
+| `My-Work-navigateur.html` | Version de secours qui s'ouvre dans le navigateur déjà autorisé, sans rien installer |
+| `SHA256SUMS.txt` | Empreintes SHA-256 des fichiers ci-dessus (y compris `My Work.exe`), pour vérifier leur intégrité |
 
 Le code source et la chaîne de compilation se trouvent dans le dépôt, dossier `ad-ops-desktop/`.
 
 ### Installation silencieuse (MSI)
 
 ```bat
-msiexec /i "Suivi-ad-ops-1.2.0.msi" /qn
-msiexec /x "Suivi-ad-ops-1.2.0.msi" /qn
+msiexec /i "My-Work-1.3.0.msi" /qn
+msiexec /x "My-Work-1.3.0.msi" /qn
 ```
 
 La désinstallation ne supprime pas les données de l'utilisateur.
@@ -58,6 +58,8 @@ Les outils de développement de Chromium sont désactivés dans la version insta
 | Réglages | `%APPDATA%\Suivi ad ops\settings.json` : taille de la fenêtre, dossier de sauvegarde choisi |
 | Cache Chromium | `%APPDATA%\Suivi ad ops\` (autres sous-dossiers) |
 | Sauvegarde automatique | Facultative. Dossier choisi par l'utilisateur, par exemple OneDrive professionnel ou un partage réseau. |
+
+Le dossier des données porte l'ancien nom de l'application (« Suivi ad ops »). Cet emplacement est fixé dans le code, pour que le changement de nom ne déplace aucune donnée.
 
 `%APPDATA%` est le profil itinérant : si les profils itinérants ou la redirection de dossiers sont en place, les données suivent l'utilisateur.
 

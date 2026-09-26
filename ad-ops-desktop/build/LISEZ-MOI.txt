@@ -1,13 +1,13 @@
-Suivi ad ops - version sans installation
+My Work - version sans installation
 =======================================
 
-Pour lancer l'application : double-cliquez sur « Suivi ad ops.exe ».
+Pour lancer l'application : double-cliquez sur « My Work.exe ».
 Rien ne s'installe, aucun droit administrateur n'est demandé.
 
 Gardez tout le dossier ensemble : l'application a besoin de tous les
-fichiers qui sont à côté de « Suivi ad ops.exe ».
+fichiers qui sont à côté de « My Work.exe ».
 
-Astuce : clic droit sur « Suivi ad ops.exe » > Afficher d'autres options
+Astuce : clic droit sur « My Work.exe » > Afficher d'autres options
 > Envoyer vers > Bureau (créer un raccourci), puis épinglez le raccourci
 à la barre des tâches.
 

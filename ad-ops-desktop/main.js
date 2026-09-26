@@ -5,6 +5,10 @@ const fs = require("fs");
 const fsp = fs.promises;
 const path = require("path");
 
+/* L'application s'appelle « My Work », mais ses données restent dans le dossier d'origine
+   « Suivi ad ops » : un changement de nom ne doit jamais faire perdre les campagnes. */
+app.setPath("userData", path.join(app.getPath("appData"), "Suivi ad ops"));
+
 const DATA = () => path.join(app.getPath("userData"), "data");
 const SETTINGS = () => path.join(app.getPath("userData"), "settings.json");
 const file = (k) => path.join(DATA(), k.replace(/[^\w.-]/g, "_") + ".json");
@@ -120,7 +124,7 @@ function createWindow() {
   const b = settings.bounds || {};
   win = new BrowserWindow({
     width: b.width || 1320, height: b.height || 900, x: b.x, y: b.y, minWidth: 900, minHeight: 600,
-    backgroundColor: "#F0F1F5", title: "Suivi ad ops", show: false,
+    backgroundColor: "#F4F4F8", title: "My Work", show: false,
     icon: path.join(__dirname, "build", "icon.png"),
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: !app.isPackaged },
   });
